@@ -34,6 +34,7 @@ const initScene = () => {
   scene('game', () => {
     // Load sprites
     loadSprite('field', 'bg/nature_2/orig.png')
+    loadSprite('player', 'battle/Animations/Defensive_Stance.png')
   })
 
   go('game')
@@ -52,8 +53,8 @@ function App() {
   const [turn, setTurn] = useState(0)
   // Player and enemy position (rect)
   const [position, setPosition] = useState([])
-  const [activePlayer, setActivePlayer] = useState([])
-  const [activeEnemy, setActiveEnemy] = useState([])
+  const [units, setUnits] = useState([])
+  const [activeUnits, setActiveUnits] = useState([])
 
   // #region Scale UI
   // Reference from: https://jslegenddev.substack.com/p/how-to-display-an-html-based-ui-on
@@ -108,9 +109,8 @@ function App() {
       )      
     }
 
-    setPosition((preState) => [ ...preState, playerPositions ])
-    setPosition((preState) => [ ...preState, enemyPositions ])
-    console.log(position)
+    position.push(playerPositions)
+    position.push(enemyPositions)
   }
 
   useEffect(() => {
@@ -127,6 +127,27 @@ function App() {
     }
   }, [])
   // #endregion
+
+  // #region Draw characters
+  useEffect(() => {
+    // The max number needs to be change by the battle
+    if(position.length === 2 && units.length < 10){
+      const zoom = 1.5
+
+      for(let i=0; i < position.length; i++){
+        const currentSets = position[i]
+        for(let j=0; j < currentSets.length; j++){
+          const set = currentSets[j]
+          console.log(set.pos)
+          const { x, y } = set.pos
+          // 128px is the height of the sprite
+          // 20px is the height of the rect
+          setUnits((prevState) => [ ...prevState, add([sprite('player', { flipX: (i > 0)? false : true }), pos(x - ((128 / 2) * zoom), y - ((128 - 20) * zoom)), scale(zoom)]) ])
+        }              
+      }
+    }
+  }, [position])
+  // #eng regin
 
   return (
     <>
