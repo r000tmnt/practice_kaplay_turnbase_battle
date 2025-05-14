@@ -1,0 +1,40 @@
+:root{
+  --width: 720;
+  --height: 1280;
+}
+
+body {
+  position: relative;
+  margin: 0;
+}
+
+.ui {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: calc(var(--width) * 1px);
+  height: calc(var(--height) * 1px);
+  transform: translate(-50%, -50%) scale(var(--scale, 0));
+  transform-origin: center;
+  box-sizing: border-box;
+  overflow: hidden;
+  z-index: 10;
+}
+
+.wave {
+  font-size: 2.5rem;
+}
+
+.turn{
+  font-size: 2rem;
+}
+
+.wave, .turn {
+  background-color: black;
+  width: fit-content;
+  padding: 5px 30px;
+  /* box-sizing: border-box; */
+  /* top-left, top-right, bottom-right, bottom-left with x and y value */
+  /* Reference from https://developer.mozilla.org/en-US/docs/Web/CSS/basic-shape/polygon */
+  clip-path: polygon(0% 0%, 100% 0%, 90% 100%, 0% 100%);
+}
