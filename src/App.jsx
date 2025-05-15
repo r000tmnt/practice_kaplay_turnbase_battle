@@ -55,6 +55,7 @@ function App() {
   const [position, setPosition] = useState([])
   const [units, setUnits] = useState([])
   const [activeUnits, setActiveUnits] = useState([])
+  const [tension, setTension] = useState({ current: 0, max: 10 })
 
   // #region Scale UI
   // Reference from: https://jslegenddev.substack.com/p/how-to-display-an-html-based-ui-on
@@ -86,14 +87,16 @@ function App() {
     ]
     const enemyPositionRef = [
       // x, y
-      [0.3, 0.7], [0.3, 0.8], [0.2, 0.65], [0.2, 0.75], [0.2, 0.85]
+      [0.22, 0.7], [0.22, 0.8], [0.12, 0.65], [0.12, 0.75], [0.12, 0.85]
     ]
+
+    const size = gameWidth * 0.1
 
     for(let i=0; i < 5; i++){
       playerPositions.push(
         add([
           pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
-          rect(20, 20),
+          rect(size, size),
           opacity(0.5),
           area()
         ])
@@ -102,7 +105,7 @@ function App() {
       enemyPositions.push(
         add([
           pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
-          rect(20, 20),
+          rect(size, size),
           opacity(0.5),
           area()
         ])
@@ -142,12 +145,21 @@ function App() {
           const { x, y } = set.pos
           // 128px is the height of the sprite
           // 20px is the height of the rect
-          setUnits((prevState) => [ ...prevState, add([sprite('player', { flipX: (i > 0)? false : true }), pos(x - ((128 / 2) * zoom), y - ((128 - 20) * zoom)), scale(zoom)]) ])
+          setUnits((prevState) => [ ...prevState, add([sprite('player', { flipX: (i > 0)? false : true }), pos(x - (128 / 2), y - (128 + 20)), scale(zoom)]) ])
         }              
       }
     }
   }, [position])
   // #eng regin
+
+  // #region ATB
+  // useEffect(() => {
+  //   // Wait till all the units ready
+  //   if(units.length == 10){
+
+  //   }
+  // }, [units])
+  // #endregion
 
   return (
     <>
