@@ -6,6 +6,9 @@ import k from './lib/kaplay';
 import settingStore from './store/setting';
 import { useSelector } from 'react-redux';
 
+// Units data
+import unit from './data/unit';
+
 const { 
   scene, 
   loadSprite, 
@@ -143,9 +146,15 @@ function App() {
           const set = currentSets[j]
           console.log(set.pos)
           const { x, y } = set.pos
+          const data = (i > 0)? unit.enemy[j] : unit.player[j]
           // 128px is the height of the sprite
           // 20px is the height of the rect
-          setUnits((prevState) => [ ...prevState, add([sprite('player', { flipX: (i > 0)? false : true }), pos(x - (128 / 2), y - (128 + 20)), scale(zoom)]) ])
+          setUnits((prevState) => [ ...prevState, 
+            {
+              ...data,
+              sprite: add([sprite('player', { flipX: (i > 0)? false : true }), pos(x - (128 / 2), y - (128 + 20)), scale(zoom)]),
+            }
+          ])
         }              
       }
     }
