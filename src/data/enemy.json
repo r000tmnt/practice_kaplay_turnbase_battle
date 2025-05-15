@@ -1,0 +1,77 @@
+[
+    {
+        "name": "E1",
+        "sprite": {},
+        "attribute": {
+            "hp": 25,
+            "mp": 10,
+            "inFight": 7,
+            "gunFight": 3,
+            "will": 5,
+            "spd": 5,
+            "luck": 3,
+            "act": 0.3,
+            "cast": 0.7
+        }
+    },
+    {
+        "name": "E2",
+        "sprite": {},
+        "attribute": {
+            "hp": 15,
+            "mp": 35,
+            "inFight": 2,
+            "gunFight": 7,
+            "will": 7,
+            "spd": 4,
+            "luck": 5,
+            "act": 0.5,
+            "cast": 0.2
+        }
+    },
+    {
+        "name": "E3",
+        "sprite": {},
+        "attribute": {
+            "hp": 25,
+            "mp": 5,
+            "inFight": 17,
+            "gunFight": 7,
+            "will": 5,
+            "spd": 3,
+            "luck": 4,
+            "act": 0.3,
+            "cast": 0.1
+        }
+    },
+    {
+        "name": "E4",
+        "sprite": {},
+        "attribute": {
+            "hp": 25,
+            "mp": 25,
+            "inFight": 5,
+            "gunFight": 5,
+            "will": 4,
+            "spd": 4,
+            "luck": 5,
+            "act": 0.3,
+            "cast": 0.3
+        }
+    },
+    {
+        "name": "E5",
+        "sprite": {},
+        "attribute": {
+            "hp": 20,
+            "mp": 50,
+            "inFight": 3,
+            "gunFight": 8,
+            "will": 10,
+            "spd": 5,
+            "luck": 6,
+            "act": 0.3,
+            "cast": 1
+        }
+    }
+]
