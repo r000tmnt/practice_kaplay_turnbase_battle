@@ -18,7 +18,11 @@ const {
   go, 
   scale,
   rect,
+  drawRect,
   area,
+  color,
+  Color,
+  outline,
   wait, 
   loop,
   opacity,
@@ -51,6 +55,7 @@ function App() {
   const gameWidth = useSelector(state => state.width)
   const gameHeight = useSelector(state => state.height)
 
+  const [_scale, setScale] = useState(0)
   const [bg, setBg] = useState({})
   const [wave, setWave] = useState({ current: 1, max: 3 })
   const [turn, setTurn] = useState(0)
@@ -58,7 +63,10 @@ function App() {
   const [position, setPosition] = useState([])
   const [units, setUnits] = useState([])
   const [activeUnits, setActiveUnits] = useState([])
+  
+  // Tension
   const [tension, setTension] = useState({ current: 0, max: 10 })
+  
 
   // #region Scale UI
   // Reference from: https://jslegenddev.substack.com/p/how-to-display-an-html-based-ui-on
@@ -66,57 +74,16 @@ function App() {
     console.log(uiRef)
     if(uiRef.current){
       const ui = uiRef.current;
-      
-      document.documentElement.style.setProperty(
-        "--scale",
-        Math.min(
-          window.innerWidth / ui.offsetWidth,
-          window.innerHeight / ui.offsetHeight
-        )
-      );
-    }
-  }
 
-  const init = () => {
-    setBg(add([sprite('field'), pos(gameWidth * -0.25, gameHeight * -0.25), scale(5)]))
-    // bg.worldPos(gameWidth * 0.25, gameHeight * 0.25)
-
-    // Set position rects
-    const playerPositions = []
-    const enemyPositions = []
-    const playerPositionRef = [
-      // x, y
-      [0.7, 0.7], [0.7, 0.8], [0.8, 0.65], [0.8, 0.75], [0.8, 0.85]
-    ]
-    const enemyPositionRef = [
-      // x, y
-      [0.22, 0.7], [0.22, 0.8], [0.12, 0.65], [0.12, 0.75], [0.12, 0.85]
-    ]
-
-    const size = gameWidth * 0.1
-
-    for(let i=0; i < 5; i++){
-      playerPositions.push(
-        add([
-          pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
-          rect(size, size),
-          opacity(0.5),
-          area()
-        ])
+      const value = Math.min(
+        window.innerWidth / ui.offsetWidth,
+        window.innerHeight / ui.offsetHeight
       )
 
-      enemyPositions.push(
-        add([
-          pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
-          rect(size, size),
-          opacity(0.5),
-          area()
-        ])
-      )      
+      setScale(value)
+      
+      document.documentElement.style.setProperty("--scale", value);
     }
-
-    position.push(playerPositions)
-    position.push(enemyPositions)
   }
 
   useEffect(() => {
@@ -125,13 +92,54 @@ function App() {
     scaleUI()
 
     // Game init
-    init()
+    setBg(add([sprite('field'), pos(gameWidth * -0.25, gameHeight * -0.25), scale(5)]))
 
     // Cleanup: Remove event listener on component unmount
     return () => {
       window.removeEventListener('resize', scaleUI)
     }
   }, [])
+
+  // Calculate positions when the background is displayed
+  useEffect(() => {
+    if(Object.entries(bg).length){
+      // Set position rects
+      const playerPositions = []
+      const enemyPositions = []
+      const playerPositionRef = [
+        // x, y
+        [0.7, 0.7], [0.7, 0.8], [0.8, 0.65], [0.8, 0.75], [0.8, 0.85]
+      ]
+      const enemyPositionRef = [
+        // x, y
+        [0.22, 0.7], [0.22, 0.8], [0.12, 0.65], [0.12, 0.75], [0.12, 0.85]
+      ]
+
+      const size = gameWidth * 0.1
+
+      for(let i=0; i < 5; i++){
+        playerPositions.push(
+          add([
+            pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
+            rect(size, size),
+            opacity(0.5),
+            area()
+          ])
+        )
+
+        enemyPositions.push(
+          add([
+            pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
+            rect(size, size),
+            opacity(0.5),
+            area()
+          ])
+        )      
+      }
+
+      setPosition([playerPositions, enemyPositions])
+    }
+  }, [bg])
   // #endregion
 
   // #region Draw characters
@@ -162,12 +170,19 @@ function App() {
   // #eng regin
 
   // #region ATB
-  // useEffect(() => {
-  //   // Wait till all the units ready
-  //   if(units.length == 10){
+  const atbBarsAnimate = ($el) => {
+    console.log($el)
+  }
 
-  //   }
-  // }, [units])
+
+  useEffect(() => {
+    // If the active unit is a player
+    if(activeUnits[0] < 4){
+      // Show available commands
+    }else{
+      // TODO - Enemy ai
+    }
+  }, [activeUnits])
   // #endregion
 
   return (
@@ -183,7 +198,29 @@ function App() {
         Turn { turn }
       </div>
 
-      <div className='command flex'>
+      {
+        // ATB bars
+        (units.length === 10)?
+          units.map((u, index) => {
+            const side = (index < 5)? 0 : 1
+            const sideIndex = (index < 5)? index : index - 5
+            return <div 
+              className="atb" 
+              data-index={index}
+              ref={($el) => atbBarsAnimate($el)} 
+              key={index}
+              style={{
+                width: `${gameWidth * 0.1}px`,
+                height: `${(gameWidth * 0.1)/10}px`,
+                backgroundColor: 'red',
+                position: 'absolute', 
+                top:0, 
+                left: 0, 
+                transform: `translate(${position[side][sideIndex].pos.x}px, ${position[side][sideIndex].pos.y - (128 / 2) - 10}px)`}}></div>
+          }): null
+      }
+
+      <div className={`command flex ${(activeUnits[0])? 'show' : 'hide'}`} >
         <div className='avatar'>
           {/* <img></img> */}
           <div className='meter'>

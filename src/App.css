@@ -38,3 +38,17 @@ body {
   /* Reference from https://developer.mozilla.org/en-US/docs/Web/CSS/basic-shape/polygon */
   clip-path: polygon(0% 0%, 100% 0%, 90% 100%, 0% 100%);
 }
+
+.command{
+  transition: all o.3s ease-in-out;
+  position: fixed;
+  bottom: 0;
+}
+
+.show{
+  margin-bottom: 0;
+}
+
+.hide{
+  margin-bottom: -100%;
+}
