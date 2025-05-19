@@ -8,6 +8,10 @@ body {
   margin: 0;
 }
 
+.flex{
+  display: flex;
+}
+
 .ui {
   position: absolute;
   top: 50%;
@@ -53,6 +57,19 @@ body {
   margin-bottom: -100%;
 }
 
+.bar {
+  background-color: black;
+  color: white;
+}
+
+.hp{
+  background-color: red;
+}
+
+.mp {
+  background-color: blue;
+}
+
 .atb > .inner {
   background-color: steelblue;
   width: 0px;
@@ -62,4 +79,14 @@ body {
 
 .done {
   background-color: turquoise;
+}
+
+.command{
+  background-color: black;
+}
+
+.action{
+  display: grid;
+  grid-template-columns: 33% 33% 33%;
+  text-align: center;
 }

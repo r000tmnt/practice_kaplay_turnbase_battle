@@ -5,6 +5,8 @@
         "attribute": {
             "hp": 25,
             "mp": 10,
+            "maxHp": 25,
+            "maxMp": 10,
             "inFight": 7,
             "gunFight": 3,
             "will": 5,
@@ -20,6 +22,8 @@
         "attribute": {
             "hp": 15,
             "mp": 35,
+            "maxHp": 15,
+            "maxMp": 35,
             "inFight": 2,
             "gunFight": 7,
             "will": 7,
@@ -35,6 +39,8 @@
         "attribute": {
             "hp": 25,
             "mp": 5,
+            "maxHp": 25,
+            "maxMp": 5,
             "inFight": 17,
             "gunFight": 7,
             "will": 5,
@@ -50,6 +56,8 @@
         "attribute": {
             "hp": 25,
             "mp": 25,
+            "maxHp": 25,
+            "maxMp": 25,
             "inFight": 5,
             "gunFight": 5,
             "will": 4,
@@ -65,6 +73,8 @@
         "attribute": {
             "hp": 20,
             "mp": 50,
+            "maxHp": 20,
+            "maxMp": 50,
             "inFight": 3,
             "gunFight": 8,
             "will": 10,
