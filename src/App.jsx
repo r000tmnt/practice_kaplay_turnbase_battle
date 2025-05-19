@@ -103,41 +103,43 @@ function App() {
   // Calculate positions when the background is displayed
   useEffect(() => {
     if(Object.entries(bg).length){
-      // Set position rects
-      const playerPositions = []
-      const enemyPositions = []
-      const playerPositionRef = [
-        // x, y
-        [0.7, 0.7], [0.7, 0.8], [0.8, 0.65], [0.8, 0.75], [0.8, 0.85]
-      ]
-      const enemyPositionRef = [
-        // x, y
-        [0.22, 0.7], [0.22, 0.8], [0.12, 0.65], [0.12, 0.75], [0.12, 0.85]
-      ]
+      wait(1, () => {
+        // Set position rects
+        const playerPositions = []
+        const enemyPositions = []
+        const playerPositionRef = [
+          // x, y
+          [0.7, 0.7], [0.7, 0.8], [0.8, 0.65], [0.8, 0.75], [0.8, 0.85]
+        ]
+        const enemyPositionRef = [
+          // x, y
+          [0.22, 0.7], [0.22, 0.8], [0.12, 0.65], [0.12, 0.75], [0.12, 0.85]
+        ]
 
-      const size = gameWidth * 0.1
+        const size = gameWidth * 0.1
 
-      for(let i=0; i < 5; i++){
-        playerPositions.push(
-          add([
-            pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
-            rect(size, size),
-            opacity(0.5),
-            area()
-          ])
-        )
+        for(let i=0; i < 5; i++){
+          playerPositions.push(
+            add([
+              pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
+              rect(size, size),
+              opacity(0.5),
+              area()
+            ])
+          )
 
-        enemyPositions.push(
-          add([
-            pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
-            rect(size, size),
-            opacity(0.5),
-            area()
-          ])
-        )      
-      }
+          enemyPositions.push(
+            add([
+              pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
+              rect(size, size),
+              opacity(0.5),
+              area()
+            ])
+          )      
+        }
 
-      setPosition([playerPositions, enemyPositions])
+        setPosition([playerPositions, enemyPositions])        
+      })
     }
   }, [bg])
   // #endregion
@@ -170,8 +172,24 @@ function App() {
   // #eng regin
 
   // #region ATB
-  const atbBarsAnimate = ($el) => {
-    console.log($el)
+  const atbBarsAnimate = ($el, unit) => {
+    // console.log($el)
+    if($el){
+      // Wait for 1s
+      wait(1, () => {
+        const time = unit.attribute.act * 100
+        let percentage = 0
+        // Loop in every 100ms
+        loop(0.1, () => {
+          percentage += 100/time
+          console.log(unit.name, percentage)
+          $el.children[0].style.width = `${percentage}%`
+        }, time).onEnd(() => {
+          $el.children[0].style.width = '100%'
+          $el.children[0].classList.add('done')
+        })
+      })
+    }
   }
 
 
@@ -207,16 +225,18 @@ function App() {
             return <div 
               className="atb" 
               data-index={index}
-              ref={($el) => atbBarsAnimate($el)} 
+              ref={($el) => atbBarsAnimate($el, u)} 
               key={index}
               style={{
                 width: `${gameWidth * 0.1}px`,
                 height: `${(gameWidth * 0.1)/10}px`,
-                backgroundColor: 'red',
+                backgroundColor: 'black',
                 position: 'absolute', 
                 top:0, 
                 left: 0, 
-                transform: `translate(${position[side][sideIndex].pos.x}px, ${position[side][sideIndex].pos.y - (128 / 2) - 10}px)`}}></div>
+                transform: `translate(${position[side][sideIndex].pos.x}px, ${position[side][sideIndex].pos.y - (128 / 2) - 10}px)`}}>
+                  <div className='inner'></div>
+                </div>
           }): null
       }
 
