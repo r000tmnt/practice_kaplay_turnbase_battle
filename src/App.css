@@ -52,3 +52,14 @@ body {
 .hide{
   margin-bottom: -100%;
 }
+
+.atb > .inner {
+  background-color: steelblue;
+  width: 0px;
+  height: 100%;
+  transition: width linear 0.1s;
+}
+
+.done {
+  background-color: turquoise;
+}
