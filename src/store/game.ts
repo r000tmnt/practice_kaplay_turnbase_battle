@@ -1,0 +1,42 @@
+import { createSlice } from "@reduxjs/toolkit";
+import { Unit, Position } from "../model/unit";
+
+const gameSlice = createSlice({
+    name: 'game',
+    initialState: {
+        wave: {
+            current: 1,
+            max: 3
+        },
+        tension: {
+            current: 0,
+            max: 100
+        },
+        turn: 0,
+        units: [] as Unit[],
+        activeUnits: [] as Number[],
+    },
+    reducers : {
+        setUnits: (state, action) => {
+            state.units = action.payload
+        },
+        updateUnit: (state, action) => {
+            const { name, attribute } = action.payload
+            // Find the unit by name
+            const unit = state.units.find((unit) => unit.name === name)
+            if (unit) {
+                // Update the unit's attributes
+                unit.attribute = { ...unit.attribute, ...attribute }
+            }
+        },
+        setActiveUnits: (state, action) => {
+            state.activeUnits.push(action.payload)
+        },
+        removeActiveUnit: (state, action) => {
+            state.activeUnits = state.activeUnits.filter((unit) => unit !== action.payload)
+        },
+    }
+})
+
+export const { setUnits, updateUnit, setActiveUnits, removeActiveUnit } = gameSlice.actions
+export default gameSlice.reducer
