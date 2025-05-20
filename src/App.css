@@ -12,6 +12,17 @@ body {
   display: flex;
 }
 
+.relative{
+  position: relative;
+}
+
+.position-center{
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .ui {
   position: absolute;
   top: 50%;
@@ -44,9 +55,12 @@ body {
 }
 
 .command{
+  display: grid;
+  grid-template-columns: 30% 70%;  
   transition: all o.3s ease-in-out;
   position: fixed;
   bottom: 0;
+  width: 100%;
 }
 
 .show{
@@ -64,10 +78,12 @@ body {
 
 .hp{
   background-color: red;
+  width: 100%;
 }
 
 .mp {
   background-color: blue;
+  width: 100%;
 }
 
 .atb > .inner {
@@ -89,4 +105,5 @@ body {
   display: grid;
   grid-template-columns: 33% 33% 33%;
   text-align: center;
+  padding: 1%;
 }
