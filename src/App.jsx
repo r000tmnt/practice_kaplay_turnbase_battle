@@ -92,6 +92,7 @@ function App() {
   const previousActiveUnits = useMemo(() => activeUnits, [activeUnits])
   const previousSetTimers = useMemo(() => timers, [timers])
   const currentActivePlayer = useMemo(() => activeUnits.find((a) => a < 5), [activeUnits])
+  const [action, setAction] = useState({})
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
@@ -315,11 +316,34 @@ function App() {
   // #endregion
 
   // #region Player actions
-  // useEffect(() => {
-  //   if(currentActivePlayer !== undefined){
+  const playerAction = (action, unit) => {
 
-  //   }
-  // }, [currentActivePlayer])
+    setAction({
+      action,
+      unit
+    })
+
+    switch (action) {
+      case 'attack':
+        // TODO - Display avialable targets
+        break
+      case 'skill':
+        // TODO - Display avialable skills
+        break
+      case 'item':
+        // TODO - Display avialable items
+        break
+      case 'defense':
+        
+        break
+      case 'change':
+        
+        break
+      case 'escape':
+
+        break
+    }    
+  }
   // #endregion
 
   // #region ATB
@@ -411,6 +435,7 @@ function App() {
         transform[1] = `(0, 1, 0 , ${deg}deg)`
         $el.style.transform = `${transform[0]}rotate3d${transform[1]}`
       }else{
+        // x, y, z, deg
         $el.style.transform += ` rotate3d(0, 1, 0, ${deg}deg)`
       }
     })
@@ -490,22 +515,22 @@ function App() {
         </div>
         <div className='action'>
           <div className='relative'>
-            <button className='position-center'>ATTACK</button>
+            <button className='position-center' onClick={playerAction('attack')}>ATTACK</button>
           </div>
           <div className='relative'>
-            <button className='position-center'>SKILL</button>
+            <button className='position-center' onClick={playerAction('skill')}>SKILL</button>
           </div>
           <div className='relative'>
-            <button className='position-center'>ITEM</button>
+            <button className='position-center' onClick={playerAction('item')}>ITEM</button>
           </div>
           <div className='relative'>
-            <button className='position-center'>DEFENSE</button>
+            <button className='position-center' onClick={playerAction('defense')}>DEFENSE</button>
           </div>
           <div className='relative'>
-            <button className='position-center'>CHANGE</button>
+            <button className='position-center' onClick={playerAction('change')}>CHANGE</button>
           </div>
           <div className='relative'>
-            <button className='position-center'>ESCAPE</button>
+            <button className='position-center' onClick={playerAction('escape')}>ESCAPE</button>
           </div>
         </div>
       </div>
