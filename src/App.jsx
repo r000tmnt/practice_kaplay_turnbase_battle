@@ -14,6 +14,7 @@ import unit from './data/unit';
 const { 
   scene, 
   loadSprite, 
+  loadShader,
   add, 
   pos, 
   sprite, 
@@ -21,7 +22,7 @@ const {
   scale,
   rect,
   area,
-  color,
+  shader,
   outline,
   wait, 
   loop,
@@ -29,6 +30,8 @@ const {
   rotate,
   animate,
   vec2,
+  WHITE,
+  RED,
   width,
 } = k
 
@@ -42,6 +45,34 @@ const initScene = () => {
     // Load sprites
     loadSprite('field', 'bg/nature_2/orig.png')
     loadSprite('player', 'battle/Animations/Defensive_Stance.png')
+
+    // Shader
+    // Reference from: https://github.com/kaplayjs/kaplay/issues/394
+    loadShader('outline', null,
+      `uniform vec3 u_color;
+
+      vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
+          vec4 outlineColor = vec4(vec3(u_color) / 255.0, 1.0);
+          vec2 textureSize = vec2(2048, 2048);
+          vec4 pixel = texture2D(tex, uv);
+          const float EPSILON = 0.0001;
+          if(pixel.a < EPSILON)
+          {
+              vec2 offset = vec2(1.0 / textureSize.x, 0.0);
+              float left = texture2D(tex, uv - offset).a;
+              float right = texture2D(tex, uv + offset).a;
+          
+              offset.x = 0.0;
+              offset.y = 1.0 / textureSize.y;
+              float up = texture2D(tex, uv - offset).a;
+              float down = texture2D(tex, uv + offset).a;
+          
+              float a = step(EPSILON, left + right + up + down);
+              pixel = mix(pixel, outlineColor, a);
+          }
+          return pixel;
+      }`
+    )
   })
 
   go('game')
@@ -166,7 +197,14 @@ function App() {
             // 128px is the height of the sprite
             // 20px is the height of the rect
             player.push({...data})
-            setunitSprites((prevState) => [...prevState, add([sprite('player', { flipX: (i > 0)? false : true }), pos(x - (128 / 2), y - (128 + 20)), scale(zoom)])] )
+            setunitSprites((prevState) => [
+              ...prevState, 
+              add([
+                sprite('player', { flipX: (i > 0)? false : true }), 
+                pos(x - (128 / 2), y - (128 + 20)), 
+                scale(zoom),
+              ])
+            ] )
           }              
         }     
         console.log('dispath', player)
@@ -276,55 +314,66 @@ function App() {
   }
   // #endregion
 
+  // #region Player actions
+  // useEffect(() => {
+  //   if(currentActivePlayer !== undefined){
+
+  //   }
+  // }, [currentActivePlayer])
+  // #endregion
+
   // #region ATB
   const atbBarsAnimate = ($el, unit, index) => {
     // console.log($el)
     // If the element exists
-    if($el){
-      // If the unit is in the active stack
-      if(previousActiveUnits.includes(index)) return
+    if(!$el) return
+   
+    // If the unit is in the active stack
+    if(previousActiveUnits.includes(index)) return
 
-      // If the timer is set already
-      if(previousSetTimers.find((t) => t.index === index)) return
+    // If the timer is set already
+    if(previousSetTimers.find((t) => t.index === index)) return
 
-      // Wait for 1s
-      wait(1, () => {
-        const time = unit.attribute.act * 100
-        let percentage = 0
-        let count = 0
+    // Wait for 1s
+    wait(1, () => {
+      const time = unit.attribute.act * 100
+      let percentage = 0
+      let count = 0
 
-        // Loop in every 100ms
-        // Save time controller
-        setTimers((prevState) => {
-          if(prevState && !prevState.find((t) => t.index === index)){
-            return [ ...prevState,
-              {
-                index,
-                controller: loop(0.1, () => {
-                  count += 1
+      // Loop in every 100ms
+      // Save time controller
+      setTimers((prevState) => {
+        if(prevState && !prevState.find((t) => t.index === index)){
+          return [ ...prevState,
+            {
+              index,
+              controller: loop(0.1, () => {
+                count += 1
 
-                  if(count > time){
-                    const theTimer = timers.find(t => t.index === index)
-                    if(theTimer){
-                      theTimer.controller.pause()
-                      timerEndAction($el, unit, index)                      
-                    }
-                  }else{
+                if(count > time){
+                  const theTimer = timers.find(t => t.index === index)
+                  if(theTimer){
+                    timerEndAction($el, unit, index)                      
+                  }
+                }else{
+                  // Check if timer overlap
+                  const oldPercentage = Number($el.children[0].style.width.split('%')[0])
+                  if(oldPercentage === percentage){
                     percentage += Math.floor(100/time)
                     console.log(unit.name, percentage, count, time)
-                    $el.children[0].style.width = `${percentage}%`                    
+                    $el.children[0].style.width = `${percentage}%`                        
                   }
-                }, time).onEnd(() => timerEndAction($el, unit, index))
-              }
-            ]
-          }else{
-            console.log('timer error', prevState)
-            // Return the current timers if error
-            return [ ...timers ]
-          }
-        })
+                }
+              }, time).onEnd(() => timerEndAction($el, unit, index))
+            }
+          ]
+        }else{
+          console.log('timer error', prevState)
+          // Return the current timers if error
+          return [ ...timers ]
+        }
       })
-    }
+    })    
   }
 
   const timerEndAction = ($el, unit, index) => {
@@ -343,7 +392,28 @@ function App() {
     if (index > 4) {
       // TODO - Enemy ai
       enemyAI($el, unit, index)
-    }    
+    }
+  }
+  // #endregion
+
+  // #region Arrow-Down
+  const setRotate3d = ($el) => {
+    if(!$el) return
+    // Rotate the element every 100ms
+    const time = 360/10
+    let deg = 0
+    loop(0.1, () => {
+      if(deg === 360) deg = 0
+
+      if($el.style.transform.includes('rotate3d')){
+        const transform = $el.style.transform.split('rotate3d')
+        deg += time
+        transform[1] = `(0, 1, 0 , ${deg}deg)`
+        $el.style.transform = `${transform[0]}rotate3d${transform[1]}`
+      }else{
+        $el.style.transform += ` rotate3d(0, 1, 0, ${deg}deg)`
+      }
+    })
   }
   // #endregion
 
@@ -378,8 +448,26 @@ function App() {
               left: 0, 
               transform: `translate(${position[side][sideIndex].pos.x}px, ${position[side][sideIndex].pos.y - (128 / 2) - 10}px)`}}>
                 <div className='inner'></div>
-              </div>
+              </div>            
         })
+      }
+
+      {
+        // Arrow
+        (currentActivePlayer !== undefined)?
+        <div 
+        className='arrow-down'
+        ref={($el) => setRotate3d($el)}
+        style={{
+          width: `${gameWidth * 0.05}px`,
+          height: `${(gameWidth * 0.1)/5}px`,
+          fontSize: `${gameWidth * 0.05}px`,                      
+          position: 'absolute', 
+          top:0, 
+          left: 0,                       
+          transform: `translate(${position[0][currentActivePlayer].pos.x + ((gameWidth * 0.05)/2)}px, ${position[0][currentActivePlayer].pos.y - (128 / 2) - 40}px)`
+        }}>&#11167;</div>
+        : null
       }
 
       <div className={`command ${currentActivePlayer >= 0? 'show' : 'hide'}`} >
