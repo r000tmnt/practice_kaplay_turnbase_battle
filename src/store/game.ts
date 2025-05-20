@@ -14,7 +14,6 @@ const gameSlice = createSlice({
         },
         turn: 0,
         units: [] as Unit[],
-        activeUnits: [] as Number[],
     },
     reducers : {
         setUnits: (state, action) => {
@@ -29,14 +28,8 @@ const gameSlice = createSlice({
                 unit.attribute = { ...unit.attribute, ...attribute }
             }
         },
-        setActiveUnits: (state, action) => {
-            state.activeUnits.push(action.payload)
-        },
-        removeActiveUnit: (state, action) => {
-            state.activeUnits = state.activeUnits.filter((unit) => unit !== action.payload)
-        },
     }
 })
 
-export const { setUnits, updateUnit, setActiveUnits, removeActiveUnit } = gameSlice.actions
+export const { setUnits, updateUnit } = gameSlice.actions
 export default gameSlice.reducer
