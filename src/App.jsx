@@ -1,13 +1,11 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo, act } from 'react'
 import './App.css'
 import k from './lib/kaplay';
 
 // store
 import { useSelector, useDispatch } from 'react-redux';
 import {
-  setUnits, 
-  setActiveUnits,
-  removeActiveUnit,
+  setUnits,
 } from './store/game';
 
 // Units data
@@ -22,10 +20,8 @@ const {
   go, 
   scale,
   rect,
-  drawRect,
   area,
   color,
-  Color,
   outline,
   wait, 
   loop,
@@ -53,15 +49,6 @@ const initScene = () => {
 
 if(typeof window !== 'undefined') initScene()
 
-// Custom usehasChanged Hook
-const useHasChanged = (value) => {
-  const ref = useRef()
-  useEffect(() => {
-    ref.current = value
-  }, [value])
-  return ref.current
-}
-
 function App() {
   const uiRef = useRef(null);
 
@@ -70,6 +57,10 @@ function App() {
   const [position, setPosition] = useState([])
   const [timers, setTimers] = useState([])
   const [unitSprites, setunitSprites] = useState([])
+  const [activeUnits, setActiveUnit] = useState([])
+  const previousActiveUnits = useMemo(() => activeUnits, [activeUnits])
+  const previousSetTimers = useMemo(() => timers, [timers])
+  const currentActivePlayer = useMemo(() => activeUnits.find((a) => a < 5), [activeUnits])
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
@@ -77,7 +68,6 @@ function App() {
   const wave = useSelector(state => state.game.wave)
   const turn = useSelector(state => state.game.turn)
   const units = useSelector(state => state.game.units)
-  const activeUnits = useSelector(state => state.game.activeUnits)
   const tension = useSelector(state => state.game.tension)
 
   const dispatch = useDispatch()
@@ -106,7 +96,7 @@ function App() {
     scaleUI()
 
     // Game init
-    setBg(add([sprite('field'), pos(gameWidth * -0.25, gameHeight * -0.25), scale(5)]))
+    setBg(add([sprite('field'), pos(gameWidth * -0.25, gameHeight * -0.5), scale(6)]))
 
     // Cleanup: Remove event listener on component unmount
     return () => {
@@ -123,11 +113,11 @@ function App() {
         const enemyPositions = []
         const playerPositionRef = [
           // x, y
-          [0.7, 0.7], [0.7, 0.8], [0.8, 0.65], [0.8, 0.75], [0.8, 0.85]
+          [0.7, 0.6], [0.7, 0.7], [0.8, 0.55], [0.8, 0.65], [0.8, 0.75]
         ]
         const enemyPositionRef = [
           // x, y
-          [0.22, 0.7], [0.22, 0.8], [0.12, 0.65], [0.12, 0.75], [0.12, 0.85]
+          [0.22, 0.6], [0.22, 0.7], [0.12, 0.55], [0.12, 0.65], [0.12, 0.75]
         ]
 
         const size = gameWidth * 0.1
@@ -190,16 +180,112 @@ function App() {
   }, [position, dispatch, units])
   // #eng regin
 
+  // #region Enemy AI
+  const enemyAI = ($el, unit, index) => {
+    const actions = [ 'attack', 'skill', 'item', 'defense', 'change', 'escape' ]
+              
+    const rng = Math.random() * actions.length
+
+    const action = actions[Math.floor(rng)]
+
+    const controller = (actionFunction, actionCallBack = null) => wait(unit.attribute.act * 10, () => {
+      // Pause timers of the other units
+      timers.forEach((t) => { if(t.index !== index) t.controller.paused = true })
+      // TODO - Call the attack function
+      console.log('Enemy attack function')
+      actionFunction()
+
+      if(actionCallBack) actionCallBack()
+      // Resume timers of the other units
+      timers.forEach((t) => { if(t.index !== index) t.controller.paused = false })
+      // Resume atb bar
+      $el.children[0].classList.remove('done')
+      $el.children[0].style.width = '0px'
+      $el.children[0].style.display = 'block'
+      atbBarsAnimate($el, unit, index)
+    }) 
+    // Display atb bar
+    $el.style.display = 'block'
+
+    // TODO - Call the action
+    switch (action) {
+      case 'attack':
+        setTimers((prevState) => [
+          ...prevState,
+          {
+            index,
+            controller: controller(() => { console.log('Enemy attack') })
+          }
+        ])
+        break
+      case 'skill':
+        setTimers((prevState) => [
+          ...prevState,
+          {
+            index,
+            controller: controller(() => { console.log('Enemy skill') })
+          }
+        ])
+        break
+      case 'item':
+        setTimers((prevState) => [
+          ...prevState,
+          {
+            index,
+            controller: controller(() => { console.log('Enemy item') })
+          }
+        ])
+        break
+      case 'defense':
+        setTimers((prevState) => [
+          ...prevState,
+          {
+            index,
+            controller: controller(() => { console.log('Enemy defense') })
+          }
+        ])
+        break
+      case 'change':
+        setTimers((prevState) => [
+          ...prevState,
+          {
+            index,
+            controller: controller(() => { console.log('Enemy change') })
+          }
+        ])
+        break
+      case 'escape':
+        setTimers((prevState) => [
+          ...prevState,
+          {
+            index,
+            controller: controller(() => { console.log('Enemy escape') })
+          }
+        ])
+        break
+      default:
+        setTimers((prevState) => [
+          ...prevState,
+          {
+            index,
+            controller: controller(() => { console.log('Enemy attack') })
+          }
+        ])        
+        break
+    }    
+  }
+  // #endregion
+
   // #region ATB
   const atbBarsAnimate = ($el, unit, index) => {
-    console.log($el)
+    // console.log($el)
     // If the element exists
     if($el){
       // If the unit is in the active stack
-      if(activeUnits.includes(index)) return
+      if(previousActiveUnits.includes(index)) return
 
       // If the timer is set already
-      if(timers.find((t) => t.index === index)) return
+      if(previousSetTimers.find((t) => t.index === index)) return
 
       // Wait for 1s
       wait(1, () => {
@@ -208,32 +294,27 @@ function App() {
         let count = 0
 
         // Loop in every 100ms
-        const controller = () => loop(0.1, () => {
-          count += 1
-          percentage += Math.floor(100/time)
-          console.log(unit.name, percentage)
-          console.log('count', count)
-          $el.children[0].style.width = `${percentage}%`
-        }, time).onEnd(() => {
-          console.log(unit.name, 'Done after', time * 0.1, 's')
-          $el.children[0].style.width = '100%'
-          $el.children[0].classList.add('done')
-
-          // Push the unit to active units
-          dispatch(
-            setActiveUnits(index)
-          )
-          // Remove the timer
-          setTimers((prevState) => prevState.filter((t) => t.index !== index))
-        })
-
         // Save time controller
         setTimers((prevState) => {
           if(prevState && !prevState.find((t) => t.index === index)){
             return [ ...prevState,
               {
                 index,
-                controller
+                controller: loop(0.1, () => {
+                  count += 1
+
+                  if(count > time){
+                    const theTimer = timers.find(t => t.index === index)
+                    if(theTimer){
+                      theTimer.controller.pause()
+                      timerEndAction($el, unit, index)                      
+                    }
+                  }else{
+                    percentage += Math.floor(100/time)
+                    console.log(unit.name, percentage, count, time)
+                    $el.children[0].style.width = `${percentage}%`                    
+                  }
+                }, time).onEnd(() => timerEndAction($el, unit, index))
               }
             ]
           }else{
@@ -246,34 +327,24 @@ function App() {
     }
   }
 
-  useEffect(() => {
-    if(timers.length === units.length){
-      timers.forEach((t) => {
-        // Init atb bar animation
-        t.controller()
-      })
-    }
-  }, [timers])
+  const timerEndAction = ($el, unit, index) => {
+    // console.log(unit.name, 'Done after', time * 0.1, 's')
+    $el.children[0].style.width = '100%'
+    $el.children[0].classList.add('done')
 
+    // Push the unit to the stack
+    setActiveUnit((prevState) => [...prevState, index])
+    // Remove the timer
+    setTimers((prevState) => prevState.filter((t) => t.index !== index))
+    // Hide the bar
+    $el.style.display = 'none'
 
-  const previousActiveUnits = useHasChanged(activeUnits);
-
-  useEffect(() => {
-    if (previousActiveUnits && previousActiveUnits[0] === activeUnits[0]) {
-      return;
-    }
-
-    // If the lastest active unit is not a player
-    if (activeUnits[activeUnits.length] > 4) {
+    // If the unit is an enemy
+    if (index > 4) {
       // TODO - Enemy ai
-      const actions = [ 'attack', 'skill', 'item', 'defense', 'change', 'escape' ]
-
-      const rng = Math.random() * actions.length
-
-      const action = actions[Math.floor(rng)]
-      console.log('Enemy action:', action)
-    }
-  }, [activeUnits, previousActiveUnits])
+      enemyAI($el, unit, index)
+    }    
+  }
   // #endregion
 
   return (
@@ -291,63 +362,62 @@ function App() {
 
       {
         // ATB bars
-        (units.length === 10)?
-          units.map((u, index) => {
-            const side = (index < 5)? 0 : 1
-            const sideIndex = (index < 5)? index : index - 5
-            return <div 
-              className="atb bar" 
-              data-index={index}
-              ref={($el) => atbBarsAnimate($el, u, index)} 
-              key={index}
-              style={{
-                width: `${gameWidth * 0.1}px`,
-                height: `${(gameWidth * 0.1)/10}px`,
-                position: 'absolute', 
-                top:0, 
-                left: 0, 
-                transform: `translate(${position[side][sideIndex].pos.x}px, ${position[side][sideIndex].pos.y - (128 / 2) - 10}px)`}}>
-                  <div className='inner'></div>
-                </div>
-          }): null
+        units.map((u, index) => {
+          const side = (index < 5)? 0 : 1
+          const sideIndex = (index < 5)? index : index - 5
+          return <div 
+            className="atb bar" 
+            data-index={index}
+            ref={($el) => atbBarsAnimate($el, u, index)} 
+            key={index}
+            style={{
+              width: `${gameWidth * 0.1}px`,
+              height: `${(gameWidth * 0.1)/10}px`,
+              position: 'absolute', 
+              top:0, 
+              left: 0, 
+              transform: `translate(${position[side][sideIndex].pos.x}px, ${position[side][sideIndex].pos.y - (128 / 2) - 10}px)`}}>
+                <div className='inner'></div>
+              </div>
+        })
       }
 
-      <div className={`command flex ${(activeUnits && activeUnits[0] < 4)? 'show' : 'hide'}`} >
+      <div className={`command ${currentActivePlayer >= 0? 'show' : 'hide'}`} >
         <div className='avatar'>
-          <img src="battle/Animations/Defensive_Stance.png" alt="player"></img>
+          <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
           <div className='meter'>
-            <label className='bar hp'>
+            <label>
               HP
-              <div>
-                {/* { activeUnits[0]?.attribute.hp }/{ activeUnits[0]?.attribute.maxHp } */}
+              <div className='bar hp'>
+                { units[currentActivePlayer]?.attribute.hp }/{ units[currentActivePlayer]?.attribute.maxHp }
               </div>
             </label>
-            <label className='bar mp'>
+            <label>
               MP
-              <div>
-                {/* { activeUnits[0]?.attribute.mp }/{ activeUnits[0]?.attribute.maxMp } */}
+              <div className='bar mp'>
+                { units[currentActivePlayer]?.attribute.mp }/{ units[currentActivePlayer]?.attribute.maxMp }
               </div>
             </label>
           </div>
         </div>
         <div className='action'>
-          <div>
-            <span>ATTACK</span>
+          <div className='relative'>
+            <button className='position-center'>ATTACK</button>
           </div>
-          <div>
-            <span>SKILL</span>
+          <div className='relative'>
+            <button className='position-center'>SKILL</button>
           </div>
-          <div>
-            <span>ITEM</span>
+          <div className='relative'>
+            <button className='position-center'>ITEM</button>
           </div>
-          <div>
-            <span>DEFENSE</span>
+          <div className='relative'>
+            <button className='position-center'>DEFENSE</button>
           </div>
-          <div>
-            <span>CHANGE</span>
+          <div className='relative'>
+            <button className='position-center'>CHANGE</button>
           </div>
-          <div>
-            <span>ESCAPE</span>
+          <div className='relative'>
+            <button className='position-center'>ESCAPE</button>
           </div>
         </div>
       </div>
