@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo, act } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import './App.css'
 import k from './lib/kaplay';
 
@@ -10,6 +10,12 @@ import {
 
 // Units data
 import unit from './data/unit';
+
+// Components
+import BattleCounter from './component/BattleCounter';
+import ATB from './component/ATB';
+import UnitArrow from './component/UnitArrow';
+import Command from './component/Command';
 
 const { 
   scene, 
@@ -86,21 +92,18 @@ function App() {
   const [_scale, setScale] = useState(0)
   const [bg, setBg] = useState({})
   const [position, setPosition] = useState([])
-  const [timers, setTimers] = useState([])
+  const [atbBarToAct, setAtbBarToAct] = useState({})
+  const [timerToAct, setTimerToAct] = useState({})
+  const [timerToKeep, setTimerToKeep] = useState({})
   const [unitSprites, setunitSprites] = useState([])
   const [activeUnits, setActiveUnit] = useState([])
   const previousActiveUnits = useMemo(() => activeUnits, [activeUnits])
-  const previousSetTimers = useMemo(() => timers, [timers])
   const currentActivePlayer = useMemo(() => activeUnits.find((a) => a < 5), [activeUnits])
   const [action, setAction] = useState({})
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
-
-  const wave = useSelector(state => state.game.wave)
-  const turn = useSelector(state => state.game.turn)
   const units = useSelector(state => state.game.units)
-  const tension = useSelector(state => state.game.tension)
 
   const dispatch = useDispatch()
 
@@ -229,19 +232,19 @@ function App() {
 
     const controller = (actionFunction, actionCallBack = null) => wait(unit.attribute.act * 10, () => {
       // Pause timers of the other units
-      timers.forEach((t) => { if(t.index !== index) t.controller.paused = true })
+      setTimerToAct({ index, value: true })
       // TODO - Call the attack function
       console.log('Enemy attack function')
       actionFunction()
 
       if(actionCallBack) actionCallBack()
       // Resume timers of the other units
-      timers.forEach((t) => { if(t.index !== index) t.controller.paused = false })
+      setTimerToAct({ index, value: false })
       // Resume atb bar
       $el.children[0].classList.remove('done')
       $el.children[0].style.width = '0px'
       $el.children[0].style.display = 'block'
-      atbBarsAnimate($el, unit, index)
+      setAtbBarToAct({$el, unit, index})
     }) 
     // Display atb bar
     $el.style.display = 'block'
@@ -249,67 +252,60 @@ function App() {
     // TODO - Call the action
     switch (action) {
       case 'attack':
-        setTimers((prevState) => [
-          ...prevState,
+        setTimerToKeep(
           {
             index,
             controller: controller(() => { console.log('Enemy attack') })
           }
-        ])
+        )
         break
       case 'skill':
-        setTimers((prevState) => [
-          ...prevState,
+        setTimerToKeep(
           {
             index,
             controller: controller(() => { console.log('Enemy skill') })
           }
-        ])
+        )
         break
       case 'item':
-        setTimers((prevState) => [
-          ...prevState,
+        setTimerToKeep(
           {
             index,
             controller: controller(() => { console.log('Enemy item') })
           }
-        ])
+        )
         break
       case 'defense':
-        setTimers((prevState) => [
-          ...prevState,
+        setTimerToKeep(
           {
             index,
             controller: controller(() => { console.log('Enemy defense') })
           }
-        ])
+        )
         break
       case 'change':
-        setTimers((prevState) => [
-          ...prevState,
+        setTimerToKeep(
           {
             index,
             controller: controller(() => { console.log('Enemy change') })
           }
-        ])
+        )
         break
       case 'escape':
-        setTimers((prevState) => [
-          ...prevState,
+        setTimerToKeep(
           {
             index,
             controller: controller(() => { console.log('Enemy escape') })
           }
-        ])
+        )
         break
       default:
-        setTimers((prevState) => [
-          ...prevState,
+        setTimerToKeep(
           {
             index,
             controller: controller(() => { console.log('Enemy attack') })
           }
-        ])        
+        )    
         break
     }    
   }
@@ -317,7 +313,7 @@ function App() {
 
   // #region Player actions
   const playerAction = (action, unit) => {
-
+    if(unit === undefined) return
     setAction({
       action,
       unit
@@ -347,99 +343,17 @@ function App() {
   // #endregion
 
   // #region ATB
-  const atbBarsAnimate = ($el, unit, index) => {
-    // console.log($el)
-    // If the element exists
+  const onAtbBarFinished = ($el, unit, index) => {
     if(!$el) return
-   
-    // If the unit is in the active stack
-    if(previousActiveUnits.includes(index)) return
-
-    // If the timer is set already
-    if(previousSetTimers.find((t) => t.index === index)) return
-
-    // Wait for 1s
-    wait(1, () => {
-      const time = unit.attribute.act * 100
-      let percentage = 0
-      let count = 0
-
-      // Loop in every 100ms
-      // Save time controller
-      setTimers((prevState) => {
-        if(prevState && !prevState.find((t) => t.index === index)){
-          return [ ...prevState,
-            {
-              index,
-              controller: loop(0.1, () => {
-                count += 1
-
-                if(count > time){
-                  const theTimer = timers.find(t => t.index === index)
-                  if(theTimer){
-                    timerEndAction($el, unit, index)                      
-                  }
-                }else{
-                  // Check if timer overlap
-                  const oldPercentage = Number($el.children[0].style.width.split('%')[0])
-                  if(oldPercentage === percentage){
-                    percentage += Math.floor(100/time)
-                    console.log(unit.name, percentage, count, time)
-                    $el.children[0].style.width = `${percentage}%`                        
-                  }
-                }
-              }, time).onEnd(() => timerEndAction($el, unit, index))
-            }
-          ]
-        }else{
-          console.log('timer error', prevState)
-          // Return the current timers if error
-          return [ ...timers ]
-        }
-      })
-    })    
-  }
-
-  const timerEndAction = ($el, unit, index) => {
-    // console.log(unit.name, 'Done after', time * 0.1, 's')
-    $el.children[0].style.width = '100%'
-    $el.children[0].classList.add('done')
-
-    // Push the unit to the stack
     setActiveUnit((prevState) => [...prevState, index])
-    // Remove the timer
-    setTimers((prevState) => prevState.filter((t) => t.index !== index))
-    // Hide the bar
-    $el.style.display = 'none'
-
-    // If the unit is an enemy
-    if (index > 4) {
-      // TODO - Enemy ai
+    if(index > 4){
       enemyAI($el, unit, index)
     }
   }
   // #endregion
 
   // #region Arrow-Down
-  const setRotate3d = ($el) => {
-    if(!$el) return
-    // Rotate the element every 100ms
-    const time = 360/10
-    let deg = 0
-    loop(0.1, () => {
-      if(deg === 360) deg = 0
 
-      if($el.style.transform.includes('rotate3d')){
-        const transform = $el.style.transform.split('rotate3d')
-        deg += time
-        transform[1] = `(0, 1, 0 , ${deg}deg)`
-        $el.style.transform = `${transform[0]}rotate3d${transform[1]}`
-      }else{
-        // x, y, z, deg
-        $el.style.transform += ` rotate3d(0, 1, 0, ${deg}deg)`
-      }
-    })
-  }
   // #endregion
 
   return (
@@ -448,92 +362,32 @@ function App() {
       {
         // Add your UI here
       }
-      <div className='wave'>
-        WAVE { wave.current }/{ wave.max }
-      </div>
-      <div className='turn'>
-        Turn { turn }
-      </div>
+      <BattleCounter />
 
       {
         // ATB bars
-        units.map((u, index) => {
-          const side = (index < 5)? 0 : 1
-          const sideIndex = (index < 5)? index : index - 5
-          return <div 
-            className="atb bar" 
-            data-index={index}
-            ref={($el) => atbBarsAnimate($el, u, index)} 
-            key={index}
-            style={{
-              width: `${gameWidth * 0.1}px`,
-              height: `${(gameWidth * 0.1)/10}px`,
-              position: 'absolute', 
-              top:0, 
-              left: 0, 
-              transform: `translate(${position[side][sideIndex].pos.x}px, ${position[side][sideIndex].pos.y - (128 / 2) - 10}px)`}}>
-                <div className='inner'></div>
-              </div>            
-        })
       }
+      <ATB 
+        position={position} 
+        previousActiveUnits={previousActiveUnits} 
+        notifyParent={onAtbBarFinished} 
+        reStart={atbBarToAct}
+        pause={timerToAct}  
+        timer={timerToKeep}
+      />
 
       {
         // Arrow
-        (currentActivePlayer !== undefined)?
-        <div 
-        className='arrow-down'
-        ref={($el) => setRotate3d($el)}
-        style={{
-          width: `${gameWidth * 0.05}px`,
-          height: `${(gameWidth * 0.1)/5}px`,
-          fontSize: `${gameWidth * 0.05}px`,                      
-          position: 'absolute', 
-          top:0, 
-          left: 0,                       
-          transform: `translate(${position[0][currentActivePlayer].pos.x + ((gameWidth * 0.05)/2)}px, ${position[0][currentActivePlayer].pos.y - (128 / 2) - 40}px)`
-        }}>&#11167;</div>
-        : null
       }
+      <UnitArrow 
+        currentActivePlayer={currentActivePlayer}
+        position={position}   
+      />
 
-      <div className={`command ${currentActivePlayer >= 0? 'show' : 'hide'}`} >
-        <div className='avatar'>
-          <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
-          <div className='meter'>
-            <label>
-              HP
-              <div className='bar hp'>
-                { units[currentActivePlayer]?.attribute.hp }/{ units[currentActivePlayer]?.attribute.maxHp }
-              </div>
-            </label>
-            <label>
-              MP
-              <div className='bar mp'>
-                { units[currentActivePlayer]?.attribute.mp }/{ units[currentActivePlayer]?.attribute.maxMp }
-              </div>
-            </label>
-          </div>
-        </div>
-        <div className='action'>
-          <div className='relative'>
-            <button className='position-center' onClick={playerAction('attack')}>ATTACK</button>
-          </div>
-          <div className='relative'>
-            <button className='position-center' onClick={playerAction('skill')}>SKILL</button>
-          </div>
-          <div className='relative'>
-            <button className='position-center' onClick={playerAction('item')}>ITEM</button>
-          </div>
-          <div className='relative'>
-            <button className='position-center' onClick={playerAction('defense')}>DEFENSE</button>
-          </div>
-          <div className='relative'>
-            <button className='position-center' onClick={playerAction('change')}>CHANGE</button>
-          </div>
-          <div className='relative'>
-            <button className='position-center' onClick={playerAction('escape')}>ESCAPE</button>
-          </div>
-        </div>
-      </div>
+      <Command 
+        currentActivePlayer={currentActivePlayer}
+        notifyParent={playerAction}
+      />
     </div>
     </>
   )
