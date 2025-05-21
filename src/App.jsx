@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import './App.css'
 import k from './lib/kaplay';
 
@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setUnits,
 } from './store/game';
+import { setScale } from './store/setting';
 
 // Units data
 import unit from './data/unit';
@@ -28,6 +29,7 @@ const {
   scale,
   rect,
   area,
+  onClick,
   shader,
   outline,
   wait, 
@@ -87,9 +89,6 @@ const initScene = () => {
 if(typeof window !== 'undefined') initScene()
 
 function App() {
-  const uiRef = useRef(null);
-
-  const [_scale, setScale] = useState(0)
   const [bg, setBg] = useState({})
   const [position, setPosition] = useState([])
   const [atbBarToAct, setAtbBarToAct] = useState({})
@@ -100,6 +99,7 @@ function App() {
   const previousActiveUnits = useMemo(() => activeUnits, [activeUnits])
   const currentActivePlayer = useMemo(() => activeUnits.find((a) => a < 5), [activeUnits])
   const [action, setAction] = useState({})
+  const [pointedTarget, setPointedTarget] = useState(-1)
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
@@ -110,19 +110,16 @@ function App() {
   // #region Scale UI
   // Reference from: https://jslegenddev.substack.com/p/how-to-display-an-html-based-ui-on
   const scaleUI = () => {
-    console.log(uiRef)
-    if(uiRef.current){
-      const ui = uiRef.current;
+    const value = Math.min(
+      window.innerWidth / gameWidth,
+      window.innerHeight / gameHeight
+    )
 
-      const value = Math.min(
-        window.innerWidth / ui.offsetWidth,
-        window.innerHeight / ui.offsetHeight
-      )
-
+    dispatch(
       setScale(value)
-      
-      document.documentElement.style.setProperty("--scale", value);
-    }
+    )
+    
+    document.documentElement.style.setProperty("--scale", value);
   }
 
   useEffect(() => {
@@ -207,6 +204,10 @@ function App() {
                 sprite('player', { flipX: (i > 0)? false : true }), 
                 pos(x - (128 / 2), y - (128 + 20)), 
                 scale(zoom),
+                area(),
+                // tag
+                "unit",
+                `index_${(i > 0)? j + 5 : j}`
               ])
             ] )
           }              
@@ -320,8 +321,18 @@ function App() {
     })
 
     switch (action) {
-      case 'attack':
-        // TODO - Display avialable targets
+      case 'attack': {
+        // Find available target
+          let target = -1
+          for(let i=5; i < 10; i++){
+            if(units[i].attribute.hp > 0){
+              target = i
+              break
+            }
+          }
+
+          if(target >= 0) setPointedTarget(target - 5)
+        }
         break
       case 'skill':
         // TODO - Display avialable skills
@@ -340,6 +351,15 @@ function App() {
         break
     }    
   }
+
+  onClick('unit', (unit) => {
+    // Get tags on the unit
+    // if(action.action === 'attack'){
+      console.log(unit)
+    // }
+    
+    // ATTACK
+  })
   // #endregion
 
   // #region ATB
@@ -357,8 +377,7 @@ function App() {
   // #endregion
 
   return (
-    <>
-    <div className="ui" ref={uiRef}>
+    <div>
       {
         // Add your UI here
       }
@@ -381,6 +400,7 @@ function App() {
       }
       <UnitArrow 
         currentActivePlayer={currentActivePlayer}
+        pointedTarget={pointedTarget}
         position={position}   
       />
 
@@ -389,7 +409,6 @@ function App() {
         notifyParent={playerAction}
       />
     </div>
-    </>
   )
 }
 

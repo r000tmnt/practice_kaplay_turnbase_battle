@@ -6,7 +6,7 @@ export default function BattleCounter() {
     const tension = useSelector(state => state.game.tension)
 
     return (
-        <div className="counter flex">
+        <div className="counter flex ui">
             <div>
                 <div className='wave'>
                     WAVE { wave.current }/{ wave.max }
