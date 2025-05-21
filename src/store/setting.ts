@@ -5,9 +5,14 @@ const settingSlice = createSlice({
     initialState: {
         width: 720,
         height: 1280,
+        scale: 0,
     },
-    reducers : {}
+    reducers : {
+        setScale: (state, action) => {
+            state.scale = action.payload
+        }
+    }
 })
 
-export const { } = settingSlice.actions
+export const { setScale } = settingSlice.actions
 export default settingSlice.reducer
