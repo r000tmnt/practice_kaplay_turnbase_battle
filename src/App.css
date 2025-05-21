@@ -1,3 +1,5 @@
+@import url('./css/animation.css');
+
 :root{
   --width: 720;
   --height: 1280;
@@ -36,22 +38,32 @@ body {
   z-index: 10;
 }
 
+.counter{
+  justify-content: space-between;
+}
+
 .wave {
   font-size: 2.5rem;
 }
 
-.turn{
+.turn, .tension{
   font-size: 2rem;
 }
 
-.wave, .turn {
+.wave, .turn, .tension {
   background-color: black;
   width: fit-content;
   padding: 5px 30px;
-  /* box-sizing: border-box; */
-  /* top-left, top-right, bottom-right, bottom-left with x and y value */
+}
+
+.wave, .turn {
+    /* top-left, top-right, bottom-right, bottom-left with x and y value */
   /* Reference from https://developer.mozilla.org/en-US/docs/Web/CSS/basic-shape/polygon */
   clip-path: polygon(0% 0%, 100% 0%, 90% 100%, 0% 100%);
+}
+
+.tension {
+  clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 10% 100%);
 }
 
 .command{
