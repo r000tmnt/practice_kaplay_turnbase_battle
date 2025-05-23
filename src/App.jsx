@@ -220,18 +220,18 @@ function App() {
         console.log('Error:', error)
       }
     }
-  }, [position, dispatch, units])
+  }, [position, dispatch])
   // #eng regin
 
   // #region Enemy AI
-  const enemyAI = ($el, unit, index) => {
+  const enemyAI = (unit, index) => {
     const actions = [ 'attack', 'skill', 'item', 'defense', 'change', 'escape' ]
               
     const rng = Math.random() * actions.length
 
     const action = actions[Math.floor(rng)]
 
-    const controller = (actionFunction, actionCallBack = null) => wait(unit.attribute.act * 10, () => {
+    const controller = (actionFunction, actionCallBack = null) => {
       // Pause timers of the other units
       setTimerToAct({ index, value: true })
       // TODO - Call the attack function
@@ -241,74 +241,41 @@ function App() {
       if(actionCallBack) actionCallBack()
       // Resume timers of the other units
       setTimerToAct({ index, value: false })
-      // Resume atb bar
-      $el.children[0].classList.remove('done')
-      $el.children[0].style.width = '0px'
-      $el.children[0].style.display = 'block'
-      setAtbBarToAct({$el, unit, index})
-    }) 
-    // Display atb bar
-    $el.style.display = 'block'
+    }
+
+    const input = {
+      unit, index,
+      display: false,
+      controller: {},
+      callback: () => setAtbBarToAct({unit, index, display: true})
+    }
 
     // TODO - Call the action
     switch (action) {
       case 'attack':
-        setTimerToKeep(
-          {
-            index,
-            controller: controller(() => { console.log('Enemy attack') })
-          }
-        )
+        input.controller = () => controller(() => { console.log('Enemy attack') })
         break
       case 'skill':
-        setTimerToKeep(
-          {
-            index,
-            controller: controller(() => { console.log('Enemy skill') })
-          }
-        )
+        input.controller = () => controller(() => { console.log('Enemy skill') })
         break
       case 'item':
-        setTimerToKeep(
-          {
-            index,
-            controller: controller(() => { console.log('Enemy item') })
-          }
-        )
+        input.controller = () => controller(() => { console.log('Enemy item') })
         break
       case 'defense':
-        setTimerToKeep(
-          {
-            index,
-            controller: controller(() => { console.log('Enemy defense') })
-          }
-        )
+        input.controller = () => controller(() => { console.log('Enemy defense') })
         break
       case 'change':
-        setTimerToKeep(
-          {
-            index,
-            controller: controller(() => { console.log('Enemy change') })
-          }
-        )
+        input.controller = () => controller(() => { console.log('Enemy change') })
         break
       case 'escape':
-        setTimerToKeep(
-          {
-            index,
-            controller: controller(() => { console.log('Enemy escape') })
-          }
-        )
+        input.controller = () => controller(() => { console.log('Enemy escape') })
         break
       default:
-        setTimerToKeep(
-          {
-            index,
-            controller: controller(() => { console.log('Enemy attack') })
-          }
-        )    
+        input.controller = () => controller(() => { console.log('Enemy attack') })
         break
     }    
+
+    setAtbBarToAct(input)
   }
   // #endregion
 
@@ -363,11 +330,10 @@ function App() {
   // #endregion
 
   // #region ATB
-  const onAtbBarFinished = ($el, unit, index) => {
-    if(!$el) return
+  const onAtbBarFinished = (unit, index) => {
     setActiveUnit((prevState) => [...prevState, index])
     if(index > 4){
-      enemyAI($el, unit, index)
+      enemyAI(unit, index)
     }
   }
   // #endregion
@@ -391,8 +357,7 @@ function App() {
         previousActiveUnits={previousActiveUnits} 
         notifyParent={onAtbBarFinished} 
         reStart={atbBarToAct}
-        pause={timerToAct}  
-        timer={timerToKeep}
+        pause={timerToAct}
       />
 
       {

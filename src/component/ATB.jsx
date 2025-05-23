@@ -4,11 +4,14 @@ import k from '../lib/kaplay'
 import unit from "../data/unit"
 
 const { 
+    add,
     wait, 
     loop, 
-    onDraw,
-    drawRect,
-    vec2,
+    rect,
+    pos,
+    outline,
+    easings,
+    tween,
     color,
     BLACK,
     RED
@@ -20,13 +23,12 @@ export default function ATB({
     notifyParent, 
     reStart, // Set witch the unit and index to restart the timer
     pause, // Pause timers other than one that is running,
-    timer, // Timer to set the ATB bar
 }) {
     const [timers, setTimers] = useState([])
     const previousSetTimers = useMemo(() => timers, [timers])
     const units = useSelector(state => state.game.units)
     const gameWidth = useSelector(state => state.setting.width)   
-    const scale = useSelector(state => state.setting.scale)
+    // const scale = useSelector(state => state.setting.scale)
 
     // const atbBarsAnimate = ($el, unit, index) => {
     //     // console.log($el)
@@ -81,83 +83,145 @@ export default function ATB({
     //     })    
     //   }
 
-    onDraw(() => {
-        if(units.length){
-            units.forEach((u, index) => {
-                if(previousActiveUnits.includes(index)) return
+    // useEffect(() => {
+    //     timers.forEach((timer) => {
+    //         if(previousActiveUnits.includes(timer.index)) return
 
-                if(previousSetTimers.find((t) => t.index === index)) return
+    //         // if(previousSetTimers.find((t) => t.index === timer.index)) return
 
-                const side = (index < 5)? 0 : 1
-                const sideIndex = (index < 5)? index : index - 5                
-                const width = gameWidth * 0.1
+    //         wait(1, () => {
+    //             if(typeof timer.controller === "function"){
+    //                 // Init timer
+    //                 setTimers((prevState) => 
+    //                     prevState.map(state => 
+    //                         state.index === timer.index? { ...state, controller: timer.controller(timer.callBack) } : state
+    //                     )
+    //                 )                    
+    //             }
+    //         })                    
+    //     })
+    // }, [timers])
 
-                // Draw the container
-                drawRect({
-                    width: width,
-                    height: (gameWidth * 0.1)/10,
-                    pos: vec2(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),
-                    color: BLACK,
-                })
+    const loopConstructor = (index, unit, controller=null, callBack=null) => {
+        const side = (index < 5)? 0 : 1
+        const sideIndex = (index < 5)? index : index - 5                
+        const width = gameWidth * 0.1
+        const height = (gameWidth * 0.1)/10
 
-                wait(1, () => {
+        const wrapper = add([
+            rect(width, height),
+            pos(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),       
+            color(0, 0, 0)                            
+        ])
+
+        wait(1, () => {
+            setTimers((prevState) =>{
+                if(prevState && !prevState.find((t) => t.index === index)){
                     const time = unit.attribute.act * 100
+
                     let percentage = 0
-                    let count = 0                    
-                    // Draw the inner bar
-                    setTimers((prevState) => {
-                        if(prevState && !prevState.find((t) => t.index === index)){
-                            return [
-                                ...prevState,
-                                {
-                                    index,
-                                    controller: loop(0,1, () => {
-                                        count += 1
-                                        if(count > time){
-                                            const theTimer = timers.find(t => t.index === index)
-                                            if(theTimer){
-                                                // timerEndAction($el, unit, index)                      
-                                            }
-                                        }else{
-                                            percentage += Math.floor(100/time)
-                                            drawRect({
-                                                width: width * percentage,
-                                                height: (gameWidth * 0.1)/10,
-                                                pos: vec2(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),
-                                                color: color(70, 130, 180),                                                
-                                            })
-                                        } 
-                                    }, time).onEnd(() => {
-                                        // ...
-                                    })
+                    let count = 0
+
+                    const bar = add([
+                        rect(width * percentage, height),
+                        pos(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),
+                        color(10, 130, 180)                            
+                    ])    
+
+                    return [
+                        ...prevState,
+                        {
+                            index,
+                            callBack,
+                            controller: controller?
+                            controller(callBack) :
+                            loop(0.1, () => {
+                                count += 1
+                                console.log(count)
+                                if(count > time){
+                                    const theTimer = timers.find(t => t.index === index)
+                                    if(theTimer){
+                                        theTimer.controller.cancel()
+                                        if(callBack) { callBack() } 
+                                        else {
+                                        timerEndAction(unit, index)      
+                                        }
+                                        wrapper.destroy()
+                                        bar.destroy()                                                          
+                                    }
+                                }else{
+                                    percentage += Math.floor(100/time)
+                                    // bar.width = width * percentage
+                                    tween(bar.width, percentage, 0, (p) => bar.width = p, easings.linear)
+
+                                } 
+                            }, time).onEnd(() => {
+                                if(callBack) { callBack() } 
+                                else {
+                                timerEndAction(unit, index)      
                                 }
-                            ]
-                        }else{
-                            return [...timers]
+                                wrapper.destroy()
+                                bar.destroy()
+                            })
                         }
-                    })
-                })
-            })
-        }
-    })    
+                    ]
+                }else{
+                    console.log('timer error', prevState)
+                    // Return the current timers if error
+                    return [ ...timers ]
+                }
+            })            
+        })
+    }   
+
+    // useEffect(() => {
+    //     console.log(timers)
+    // }, [timers])
     
-    const timerEndAction = ($el, unit, index) => {
+    const waitConstructor = (index, unit, action, callBack=null) => {
+        setTimers((prevState) =>{
+            if(prevState && !prevState.find((t) => t.index === index)){
+                const time = unit.attribute.act * 10
+
+                return [
+                    ...prevState,
+                    {
+                        index,
+                        controller: wait(time, () => {
+                            action()
+                        }).onEnd(() => {
+                            setTimers((prevState) => prevState.filter((t) => t.index !== index))
+                            if(callBack) callBack()
+                        })
+                    }
+                ]
+            }else{
+                console.log('timer error', prevState)
+                // Return the current timers if error
+                return [ ...timers ]
+            }
+        })        
+    }
+    
+    const timerEndAction = (unit, index) => {
     // console.log(unit.name, 'Done after', time * 0.1, 's')
-    $el.children[0].style.width = '100%'
-    $el.children[0].classList.add('done')
+    // $el.children[0].style.width = '100%'
+    // $el.children[0].classList.add('done')
 
     // Notify the parent with the index
-    notifyParent($el, unit, index)
+    notifyParent(unit, index)
     // Remove the timer
     setTimers((prevState) => prevState.filter((t) => t.index !== index))
     // Hide the bar
-    $el.style.display = 'none'
+    // $el.style.display = 'none'
     }    
 
     useEffect(() => {
         if(Object.keys(reStart).length === 0) return
-        // const { $el, unit, index } = reStart
-        // atbBarsAnimate($el, unit, index)
+        console.log(reStart)
+        const {unit, index, display, controller, callBack } = reStart
+        if(display) loopConstructor(index, unit, controller, callBack)
+        else waitConstructor(index, unit, controller, callBack)
     }, [reStart])
 
     useEffect(() => {
@@ -169,22 +233,10 @@ export default function ATB({
     }, [pause])
 
     useEffect(() => {
-        if(Object.keys(timer).length === 0) return
-        setTimers((prevState) =>{
-            if(prevState && !prevState.find((t) => t.index === timer.index)){
-                return [
-                    ...prevState,
-                    {
-                        ...timer
-                    }
-                ]
-            }else{
-                console.log('timer error', prevState)
-                // Return the current timers if error
-                return [ ...timers ]
-            }
-        })
-    }, [timer])
+        if(units.length === 10){
+            units.forEach((unit, index) => loopConstructor(index, unit))
+        }
+    }, [units])
 
     // return (
     //     units.map((u, index) => {
