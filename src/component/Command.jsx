@@ -5,7 +5,7 @@ export default function Command({currentActivePlayer, notifyParent}) {
     const gameWidth = useSelector(state => state.setting.width)   
 
     return(
-        <div className={`command ui ${currentActivePlayer >= 0? 'show' : 'hide'}`} >
+        <div className={`command ui ${currentActivePlayer >= 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }} >
             <div className='avatar'>
                 <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
                 <div className='meter'>
