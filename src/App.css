@@ -27,22 +27,20 @@ body {
 
 .ui {
   position: absolute;
-  /* top: 50%;
-  left: 50%; */
+  top: 0;
+  /*left: 50%; */
   width: calc(var(--width) * 1px);
   /* height: calc(var(--height) * 1px); */
   /* transform: translate(-50%, -50%) scale(var(--scale, 0)); */
-  /* transform: scale(var(--scale, 0)); */
-  transform-origin: center;
+  transform: scale(var(--scale, 0));
+  /* transform-origin: center; */
   box-sizing: border-box;
   overflow: hidden;
   z-index: 10;
 }
 
 .counter{
-  top: 0;
-  left: 50%;
-  transform: translate(-50%, -22%) scale(var(--scale, 0));
+  transform-origin: top;
   justify-content: space-between;
 }
 
@@ -71,13 +69,15 @@ body {
 }
 
 .command{
+  background-color: black;
   display: grid;
   grid-template-columns: 30% 70%;  
   transition: all o.3s ease-in-out;
   position: fixed;
+  top: unset;
   bottom: 0;
-  left: 50%;
-  transform: translate(-50%, 22%) scale(var(--scale, 0));
+  transform-origin: bottom;
+  /* transform: translate(-50%, 22%) scale(var(--scale, 0)); */
   /* width: 100%; */
 }
 
@@ -119,13 +119,14 @@ body {
   background-color: turquoise;
 }
 
-.command{
-  background-color: black;
-}
-
 .action{
   display: grid;
   grid-template-columns: 33% 33% 33%;
   text-align: center;
   padding: 1%;
 }
+
+/* .action > div {
+  height: calc(var(--width) * 0.33px);
+  transform: scale(var(--scale, 0));
+} */
