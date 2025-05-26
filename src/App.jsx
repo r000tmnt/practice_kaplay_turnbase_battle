@@ -29,7 +29,9 @@ const {
   scale,
   rect,
   area,
+  text,
   onClick,
+  onHover,
   shader,
   outline,
   wait, 
@@ -231,18 +233,6 @@ function App() {
 
     const action = actions[Math.floor(rng)]
 
-    const controller = (actionFunction, actionCallBack = null) => {
-      // Pause timers of the other units
-      setTimerToAct({ index, value: true })
-      // TODO - Call the attack function
-      console.log('Enemy attack function')
-      actionFunction()
-
-      if(actionCallBack) actionCallBack()
-      // Resume timers of the other units
-      setTimerToAct({ index, value: false })
-    }
-
     const input = {
       unit, index,
       display: false,
@@ -253,29 +243,73 @@ function App() {
     // TODO - Call the action
     switch (action) {
       case 'attack':
-        input.controller = () => controller(() => { console.log('Enemy attack') })
+        input.controller = () => controller(() => { console.log('Enemy attack'), index })
         break
       case 'skill':
-        input.controller = () => controller(() => { console.log('Enemy skill') })
+        input.controller = () => controller(() => { console.log('Enemy skill'), index })
         break
       case 'item':
-        input.controller = () => controller(() => { console.log('Enemy item') })
+        input.controller = () => controller(() => { console.log('Enemy item'), index })
         break
       case 'defense':
-        input.controller = () => controller(() => { console.log('Enemy defense') })
+        input.controller = () => controller(() => { console.log('Enemy defense'), index })
         break
       case 'change':
-        input.controller = () => controller(() => { console.log('Enemy change') })
+        input.controller = () => controller(() => { console.log('Enemy change'), index })
         break
       case 'escape':
-        input.controller = () => controller(() => { console.log('Enemy escape') })
+        input.controller = () => controller(() => { console.log('Enemy escape'), index })
         break
       default:
-        input.controller = () => controller(() => { console.log('Enemy attack') })
+        input.controller = () => controller(() => { console.log('Enemy attack'), index })
         break
     }    
 
     setAtbBarToAct(input)
+  }
+  // #endregion
+
+  // #region Shared actions
+  const controller = (actionFunction, index, actionCallBack = null) => {
+    // Pause timers of the other units
+    setTimerToAct({ index, value: true })
+    // TODO - Call the attack function
+    console.log('Enemy attack function')
+    actionFunction()
+
+    if(actionCallBack) actionCallBack()
+    // Resume timers of the other units
+    setTimerToAct({ index, value: false })
+  }
+
+  const attack = (unit, target) => {
+    let dmg = unit.attribute.inFight - (unit.attribute.inFight * (target.attribute.def / 100))
+
+    const crit = unit.attribute.luck / 100
+
+    const rng = Math.random()
+
+    if(rng <= crit){
+      dmg = Math.floor(dmg * 1.5)
+    }
+
+    target.attribute.hp -= dmg
+
+    // Display damage
+    setAction((prevState) => {
+      return {
+        ...prevState,
+        text: add([
+          text(dmg),
+          pos(target.pos.x, target.post.y)
+        ])
+      }
+    })
+
+    if(target.attribute.hp < 0) {
+      target.attribute.hp = 0
+      // TODO - Unit lose animation
+    }
   }
   // #endregion
 
@@ -320,12 +354,34 @@ function App() {
   }
 
   onClick('unit', (unit) => {
-    // Get tags on the unit
-    // if(action.action === 'attack'){
-      console.log(unit)
-    // }
-    
-    // ATTACK
+
+    const index = Number(action.unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
+
+    const input = {
+      unit, index,
+      display: false,
+      controller: {},
+      callback: () => setAtbBarToAct({unit: action.unit, index, display: true})
+    }
+
+    switch(action.action){
+      case 'attack':{
+          input.controller = () => controller(() => attack(action.unit, units[pointedTarget + 5]), index)
+      }
+      break;
+    }
+
+    setAtbBarToAct(input)
+  })
+
+  onHover('unit', (unit) => {
+    switch(action.action){
+      case 'attack':{
+        const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
+        if(target >= 0) setPointedTarget(target - 5)
+      }
+      break;
+    }
   })
   // #endregion
 
@@ -343,7 +399,7 @@ function App() {
   // #endregion
 
   return (
-    <div>
+    <>
       {
         // Add your UI here
       }
@@ -373,7 +429,7 @@ function App() {
         currentActivePlayer={currentActivePlayer}
         notifyParent={playerAction}
       />
-    </div>
+    </>
   )
 }
 
