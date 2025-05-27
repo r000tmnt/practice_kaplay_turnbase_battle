@@ -72,7 +72,7 @@ body {
   background-color: black;
   display: grid;
   grid-template-columns: 30% 70%;  
-  transition: all o.3s ease-in-out;
+  transition: all 0.3s ease-in-out;
   position: fixed;
   top: unset;
   bottom: 0;
