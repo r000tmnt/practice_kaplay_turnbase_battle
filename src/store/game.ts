@@ -14,6 +14,7 @@ const gameSlice = createSlice({
         },
         turn: 0,
         units: [] as Unit[],
+        action: {} as { action: string, target: any }
     },
     reducers : {
         setUnits: (state, action) => {
@@ -28,8 +29,11 @@ const gameSlice = createSlice({
                 unit.attribute = { ...unit.attribute, ...attribute }
             }
         },
+        setAction: (state, action) => {
+            state.action = action.payload
+        },
     }
 })
 
-export const { setUnits, updateUnit } = gameSlice.actions
+export const { setUnits, updateUnit, setAction } = gameSlice.actions
 export default gameSlice.reducer

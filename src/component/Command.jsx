@@ -25,22 +25,22 @@ export default function Command({currentActivePlayer, notifyParent}) {
             </div>
         <div className='action'>
           <div className='relative'>
-            <button className='position-center' onClick={() => notifyParent('attack', units[currentActivePlayer])}>ATTACK</button>
+            <button className='position-center' onClick={() => notifyParent('attack', units[currentActivePlayer], currentActivePlayer)}>ATTACK</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => notifyParent('skill', units[currentActivePlayer])}>SKILL</button>
+            <button className='position-center' onClick={() => notifyParent('skill', units[currentActivePlayer], currentActivePlayer)}>SKILL</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => notifyParent('item', units[currentActivePlayer])}>ITEM</button>
+            <button className='position-center' onClick={() => notifyParent('item', units[currentActivePlayer], currentActivePlayer)}>ITEM</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => notifyParent('defense', units[currentActivePlayer])}>DEFENSE</button>
+            <button className='position-center' onClick={() => notifyParent('defense', units[currentActivePlayer], currentActivePlayer)}>DEFENSE</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => notifyParent('change', units[currentActivePlayer])}>CHANGE</button>
+            <button className='position-center' onClick={() => notifyParent('change', units[currentActivePlayer], currentActivePlayer)}>CHANGE</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => notifyParent('escape', units[currentActivePlayer])}>ESCAPE</button>
+            <button className='position-center' onClick={() => notifyParent('escape', units[currentActivePlayer], currentActivePlayer)}>ESCAPE</button>
           </div>
         </div>
       </div>

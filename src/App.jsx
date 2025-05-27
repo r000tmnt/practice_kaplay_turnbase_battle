@@ -6,6 +6,8 @@ import k from './lib/kaplay';
 import { useSelector, useDispatch } from 'react-redux';
 import {
   setUnits,
+  updateUnit,
+  setAction,
 } from './store/game';
 import { setScale } from './store/setting';
 
@@ -39,6 +41,8 @@ const {
   opacity,
   rotate,
   animate,
+  tween,
+  easings,
   vec2,
   WHITE,
   RED,
@@ -95,17 +99,16 @@ function App() {
   const [position, setPosition] = useState([])
   const [atbBarToAct, setAtbBarToAct] = useState({})
   const [timerToAct, setTimerToAct] = useState({})
-  const [timerToKeep, setTimerToKeep] = useState({})
   const [unitSprites, setunitSprites] = useState([])
   const [activeUnits, setActiveUnit] = useState([])
   const previousActiveUnits = useMemo(() => activeUnits, [activeUnits])
   const currentActivePlayer = useMemo(() => activeUnits.find((a) => a < 5), [activeUnits])
-  const [action, setAction] = useState({})
   const [pointedTarget, setPointedTarget] = useState(-1)
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
   const units = useSelector(state => state.game.units)
+  const action = useSelector(state => state.game.action)
 
   const dispatch = useDispatch()
 
@@ -282,7 +285,13 @@ function App() {
     setTimerToAct({ index, value: false })
   }
 
-  const attack = (unit, target) => {
+  /**
+   * Attack function
+   * @param {Object} unit - Who performs the attack
+   * @param {Object} target - Who takes damage 
+   * @param {number} index - The index of the unit in the unitSprites array
+   */
+  const attack = (unit, target, index) => {
     let dmg = unit.attribute.inFight - (unit.attribute.inFight * (target.attribute.def / 100))
 
     const crit = unit.attribute.luck / 100
@@ -293,36 +302,55 @@ function App() {
       dmg = Math.floor(dmg * 1.5)
     }
 
-    target.attribute.hp -= dmg
+    const attribute = JSON.parse(JSON.stringify(target.attribute))
+    attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
+    
+    updateUnit({ name: target.name, attribute: attribute })
+    
+    // Create text
+    const dmgText = add([
+      text(dmg),
+      pos(unitSprites[index].pos.x, unitSprites[index].pos.y - 50),
+      opacity(1)
+    ])
 
-    // Display damage
-    setAction((prevState) => {
-      return {
-        ...prevState,
-        text: add([
-          text(dmg),
-          pos(target.pos.x, target.post.y)
-        ])
+    // Animate the damage text
+    tween(
+      dmgText.pos, 
+      vec2(unitSprites[index].pos.x, unitSprites[index].pos.y - 100), 
+      0.5,
+      (pos) => {
+        dmgText.pos = pos
+      },
+      easings.easeInOutQuad
+    ).onEnd(() => {
+      dmgText.destroy()
+
+      if(attribute.hp === 0) {
+        // TODO - Unit lose animation
       }
-    })
 
-    if(target.attribute.hp < 0) {
-      target.attribute.hp = 0
-      // TODO - Unit lose animation
-    }
+      // Restart the ATB bar for the unit
+      setAtbBarToAct({ unit, index: currentActivePlayer, display: true })
+    })
   }
   // #endregion
 
   // #region Player actions
-  const playerAction = (action, unit) => {
+  /** 
+   * Change the ui state and enable sprite hover and click events
+  */
+
+  const playerAction = (action, unit, index) => {
     if(unit === undefined) return
-    setAction({
-      action,
-      unit
-    })
+    dispatch(
+      setAction({ action, unit })
+    )
 
     switch (action) {
       case 'attack': {
+        spriteHoverEvent.paused = false
+        spriteClickEvent.paused = false
         // Find available target
           let target = -1
           for(let i=5; i < 10; i++){
@@ -335,7 +363,10 @@ function App() {
           if(target >= 0) setPointedTarget(target - 5)
         }
         break
-      case 'skill':
+      case 'skill': {
+        spriteHoverEvent.paused = false
+        spriteClickEvent.paused = false
+      }
         // TODO - Display avialable skills
         break
       case 'item':
@@ -350,39 +381,57 @@ function App() {
       case 'escape':
 
         break
-    }    
+    } 
+    
+    setActiveUnit((prevState) => prevState.filter((a) => a !== index))
   }
 
-  onClick('unit', (unit) => {
+  const spriteClickEvent = onClick('unit', () => {
+    if(atbBarToAct.index && currentActivePlayer && atbBarToAct.index === currentActivePlayer ) return
+    if(pointedTarget < 0) return
 
-    const index = Number(action.unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
+    const unit = units[currentActivePlayer]
 
     const input = {
-      unit, index,
+      unit: unit, 
+      index: currentActivePlayer,
       display: false,
       controller: {},
-      callback: () => setAtbBarToAct({unit: action.unit, index, display: true})
+      callback: () => setAtbBarToAct({unit: unit, index: currentActivePlayer, display: true})
     }
 
     switch(action.action){
       case 'attack':{
-          input.controller = () => controller(() => attack(action.unit, units[pointedTarget + 5]), index)
+          input.controller = () => controller(() => attack(unit, units[pointedTarget + 5], pointedTarget + 5), currentActivePlayer)
+          setPointedTarget(-1)
+          spriteHoverEvent.paused = false
+          spriteClickEvent.paused = true
       }
       break;
     }
 
     setAtbBarToAct(input)
   })
+  // Default to paused
+  spriteClickEvent.paused = true
 
-  onHover('unit', (unit) => {
+  const spriteHoverEvent = onHover('unit', (unit) => {
+    if(atbBarToAct.index === currentActivePlayer) return
+
     switch(action.action){
-      case 'attack':{
+      case 'attack': case 'skill': {
         const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
         if(target >= 0) setPointedTarget(target - 5)
       }
       break;
     }
   })
+  // Default to paused
+  spriteHoverEvent.paused = true
+
+  useEffect(() => {
+    console.log('Action changed:', action)
+  }, [action])
   // #endregion
 
   // #region ATB
