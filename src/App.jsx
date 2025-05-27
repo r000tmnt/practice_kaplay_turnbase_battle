@@ -8,6 +8,7 @@ import {
   setUnits,
   updateUnit,
   setAction,
+  setTension,
 } from './store/game';
 import { setScale } from './store/setting';
 
@@ -109,6 +110,7 @@ function App() {
   const gameHeight = useSelector(state => state.setting.height)
   const units = useSelector(state => state.game.units)
   const action = useSelector(state => state.game.action)
+  const tension = useSelector(state => state.game.tension)
 
   const dispatch = useDispatch()
 
@@ -292,7 +294,8 @@ function App() {
    * @param {number} index - The index of the unit in the unitSprites array
    */
   const attack = (unit, target, index) => {
-    let dmg = unit.attribute.inFight - (unit.attribute.inFight * (target.attribute.def / 100))
+    let dmg = unit.attribute.inFight - Math.floor(unit.attribute.inFight * (target.attribute.def / 100))
+    dmg += Math.floor(dmg * (tension.current / 100)) // Add tension bonus
 
     const crit = unit.attribute.luck / 100
 
@@ -328,6 +331,13 @@ function App() {
 
       if(attribute.hp === 0) {
         // TODO - Unit lose animation
+        dispatch(
+          setTension(5)
+        )        
+      }else{
+        dispatch(
+          setTension(1)
+        )
       }
 
       // Restart the ATB bar for the unit
@@ -404,7 +414,7 @@ function App() {
       case 'attack':{
           input.controller = () => controller(() => attack(unit, units[pointedTarget + 5], pointedTarget + 5), currentActivePlayer)
           setPointedTarget(-1)
-          spriteHoverEvent.paused = false
+          spriteHoverEvent.paused = true
           spriteClickEvent.paused = true
       }
       break;

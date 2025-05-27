@@ -32,8 +32,11 @@ const gameSlice = createSlice({
         setAction: (state, action) => {
             state.action = action.payload
         },
+        setTension: (state, action) => {
+            state.tension.current = (state.tension.current + action.payload) > state.tension.max ? state.tension.max : state.tension.current + action.payload
+        }
     }
 })
 
-export const { setUnits, updateUnit, setAction } = gameSlice.actions
+export const { setUnits, updateUnit, setAction, setTension } = gameSlice.actions
 export default gameSlice.reducer
