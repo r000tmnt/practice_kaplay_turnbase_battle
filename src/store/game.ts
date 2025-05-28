@@ -33,7 +33,11 @@ const gameSlice = createSlice({
             state.action = action.payload
         },
         setTension: (state, action) => {
-            state.tension.current = (state.tension.current + action.payload) > state.tension.max ? state.tension.max : state.tension.current + action.payload
+            if(action.payload.current)
+                state.tension.current = (state.tension.current + action.payload.current) > state.tension.max ? state.tension.max : state.tension.current + action.payload.current
+
+            if(action.payload.max)
+                state.tension.max += action.payload.max            
         }
     }
 })

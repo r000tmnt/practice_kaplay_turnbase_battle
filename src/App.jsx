@@ -313,14 +313,14 @@ function App() {
     // Create text
     const dmgText = add([
       text(dmg),
-      pos(unitSprites[index].pos.x, unitSprites[index].pos.y - 50),
+      pos(unitSprites[index].pos.x + (128 / 2), unitSprites[index].pos.y - 50),
       opacity(1)
     ])
 
     // Animate the damage text
     tween(
       dmgText.pos, 
-      vec2(unitSprites[index].pos.x, unitSprites[index].pos.y - 100), 
+      vec2(dmgText.pos.x, dmgText.pos.y - 50), 
       0.5,
       (pos) => {
         dmgText.pos = pos
@@ -329,14 +329,22 @@ function App() {
     ).onEnd(() => {
       dmgText.destroy()
 
+      dispatch(
+        updateUnit({ name: target.name, attribute })
+      )
+
       if(attribute.hp === 0) {
         // TODO - Unit lose animation
+
+        // Remove sprite
+        unitSprites[index].destroy()
+
         dispatch(
-          setTension(5)
+          setTension({ current: 5 })
         )        
       }else{
         dispatch(
-          setTension(1)
+          setTension({ current: 1 })
         )
       }
 
