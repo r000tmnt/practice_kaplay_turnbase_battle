@@ -14,8 +14,10 @@ interface Unit {
         spd: Number,
         luck: Number,
         act: Number,
-        cast: Number
-    }
+        cast: Number,
+        status: String
+    },
+    action: String
 }
 
 interface Position {
