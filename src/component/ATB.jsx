@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from "react"
 import { useSelector } from "react-redux"
 import k from '../lib/kaplay'
-import unit from "../data/unit"
+// import unit from "../data/unit"
 
 const { 
     add,
@@ -103,6 +103,11 @@ export default function ATB({
     // }, [timers])
 
     const loopConstructor = (index, unit, controller=null, callBack=null) => {
+        
+        if(previousActiveUnits.includes(index)) return
+
+        if(previousSetTimers.find((t) => t.index === index)) return
+
         const side = (index < 5)? 0 : 1
         const sideIndex = (index < 5)? index : index - 5                
         const width = gameWidth * 0.1
@@ -181,14 +186,20 @@ export default function ATB({
     const waitConstructor = (index, unit, action, callBack=null) => {
         setTimers((prevState) =>{
             if(prevState && !prevState.find((t) => t.index === index)){
-                const time = unit.attribute.act * 10
+                const time = (unit.action === 'defense')? 0 : unit.attribute.act * 10
 
                 return [
                     ...prevState,
                     {
                         index,
                         controller: wait(time, () => {
-                            action()
+                            try {
+                               action() 
+                            } catch (error) {
+                                console.log(error)
+                                console.log('unit action error', unit)
+                            }
+                            
                         }).onEnd(() => {
                             setTimers((prevState) => prevState.filter((t) => t.index !== index))
                             if(callBack) callBack()

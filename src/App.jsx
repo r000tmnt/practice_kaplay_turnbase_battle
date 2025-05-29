@@ -7,7 +7,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setUnits,
   updateUnit,
-  setAction,
   setTension,
 } from './store/game';
 import { setScale } from './store/setting';
@@ -245,28 +244,37 @@ function App() {
       callback: () => setAtbBarToAct({unit, index, display: true})
     }
 
+    // Keep tracking action
+    dispatch(
+      updateUnit({ name: unit.name, attribute: unit.attribute, action })
+    )
+
     // TODO - Call the action
     switch (action) {
-      case 'attack':
-        input.controller = () => controller(() => { console.log('Enemy attack'), index })
+      case 'attack':{
+          // Choose a player
+          const target = Math.floor(Math.random() * 4)
+
+          input.controller = () => controller(() => attack(unit, units[target], index, target), index )
+        }
         break
       case 'skill':
-        input.controller = () => controller(() => { console.log('Enemy skill'), index })
+        input.controller = () => controller(() => { console.log('Enemy skill')}, index )
         break
       case 'item':
-        input.controller = () => controller(() => { console.log('Enemy item'), index })
+        input.controller = () => controller(() => { console.log('Enemy item')})
         break
       case 'defense':
-        input.controller = () => controller(() => { console.log('Enemy defense'), index })
+        input.controller = () => controller(() => { console.log('Enemy defense')})
         break
       case 'change':
-        input.controller = () => controller(() => { console.log('Enemy change'), index })
+        input.controller = () => controller(() => { console.log('Enemy change')})
         break
       case 'escape':
-        input.controller = () => controller(() => { console.log('Enemy escape'), index })
+        input.controller = () => controller(() => { console.log('Enemy escape')})
         break
       default:
-        input.controller = () => controller(() => { console.log('Enemy attack'), index })
+        input.controller = () => controller(() => { console.log('Enemy attack')})
         break
     }    
 
@@ -291,10 +299,11 @@ function App() {
    * Attack function
    * @param {Object} unit - Who performs the attack
    * @param {Object} target - Who takes damage 
-   * @param {number} index - The index of the unit in the unitSprites array
+   * @param {number} uindex - The index of the player unit in the unitSprites array
+   * @param {number} tindex - The index of the enemy unit in the unitSprites array
    */
-  const attack = (unit, target, index) => {
-    let dmg = unit.attribute.inFight - Math.floor(unit.attribute.inFight * (target.attribute.def / 100))
+  const attack = (unit, target, uIndex, tindex) => {
+    let dmg = (unit.attribute.inFight + Math.floor(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.floor(target.attribute.def * (target.attribute.def / 100))
     dmg += Math.floor(dmg * (tension.current / 100)) // Add tension bonus
 
     const crit = unit.attribute.luck / 100
@@ -305,15 +314,20 @@ function App() {
       dmg = Math.floor(dmg * 1.5)
     }
 
+    // If the target take defense
+    if(target.action === 'defense') dmg = Math.floor(dmg / 2)    
+
     const attribute = JSON.parse(JSON.stringify(target.attribute))
     attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
     
-    updateUnit({ name: target.name, attribute: attribute })
+    dispatch(
+      updateUnit({ name: target.name, attribute: attribute, action: target.action })
+    )
     
     // Create text
     const dmgText = add([
       text(dmg),
-      pos(unitSprites[index].pos.x + (128 / 2), unitSprites[index].pos.y - 50),
+      pos(unitSprites[tindex].pos.x + (128 / 2), unitSprites[tindex].pos.y - 50),
       opacity(1)
     ])
 
@@ -330,14 +344,14 @@ function App() {
       dmgText.destroy()
 
       dispatch(
-        updateUnit({ name: target.name, attribute })
+        updateUnit({ name: target.name, attribute, action: target.action })
       )
 
       if(attribute.hp === 0) {
         // TODO - Unit lose animation
 
         // Remove sprite
-        unitSprites[index].destroy()
+        unitSprites[tindex].destroy()
 
         dispatch(
           setTension({ current: 5 })
@@ -349,7 +363,8 @@ function App() {
       }
 
       // Restart the ATB bar for the unit
-      setAtbBarToAct({ unit, index: currentActivePlayer, display: true })
+      // TODO - Need TO know whan to use the play index or enemy index
+      setAtbBarToAct({ unit, index: uIndex, display: true })
     })
   }
   // #endregion
@@ -361,8 +376,9 @@ function App() {
 
   const playerAction = (action, unit, index) => {
     if(unit === undefined) return
+
     dispatch(
-      setAction({ action, unit })
+      updateUnit({ name: unit.name, attribute: unit.attribute, action })
     )
 
     switch (action) {
@@ -391,7 +407,7 @@ function App() {
         // TODO - Display avialable items
         break
       case 'defense':
-        
+        // TODO - Switch to defense sprite / animation
         break
       case 'change':
         
@@ -418,9 +434,9 @@ function App() {
       callback: () => setAtbBarToAct({unit: unit, index: currentActivePlayer, display: true})
     }
 
-    switch(action.action){
+    switch(unit.action){
       case 'attack':{
-          input.controller = () => controller(() => attack(unit, units[pointedTarget + 5], pointedTarget + 5), currentActivePlayer)
+          input.controller = () => controller(() => attack(unit, units[pointedTarget + 5], currentActivePlayer, pointedTarget + 5), currentActivePlayer)
           setPointedTarget(-1)
           spriteHoverEvent.paused = true
           spriteClickEvent.paused = true
@@ -436,7 +452,7 @@ function App() {
   const spriteHoverEvent = onHover('unit', (unit) => {
     if(atbBarToAct.index === currentActivePlayer) return
 
-    switch(action.action){
+    switch(units[currentActivePlayer].action){
       case 'attack': case 'skill': {
         const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
         if(target >= 0) setPointedTarget(target - 5)
