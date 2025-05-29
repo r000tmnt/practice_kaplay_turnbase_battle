@@ -14,8 +14,10 @@
             "spd": 5,
             "luck": 3,
             "act": 0.3,
-            "cast": 0.7
-        }
+            "cast": 0.7,
+            "status": ""
+        },
+        "action": ""
     },
     {
         "name": "E2",
@@ -32,8 +34,10 @@
             "spd": 4,
             "luck": 5,
             "act": 0.5,
-            "cast": 0.2
-        }
+            "cast": 0.2,
+            "status": ""
+        },
+        "action": ""
     },
     {
         "name": "E3",
@@ -50,8 +54,10 @@
             "spd": 3,
             "luck": 4,
             "act": 0.3,
-            "cast": 0.1
-        }
+            "cast": 0.1,
+            "status": ""
+        },
+        "action": ""
     },
     {
         "name": "E4",
@@ -68,8 +74,10 @@
             "spd": 4,
             "luck": 5,
             "act": 0.3,
-            "cast": 0.3
-        }
+            "cast": 0.3,
+            "status": ""
+        },
+        "action": ""
     },
     {
         "name": "E5",
@@ -86,7 +94,9 @@
             "spd": 5,
             "luck": 6,
             "act": 0.3,
-            "cast": 1
-        }
+            "cast": 1,
+            "status": ""
+        },
+        "action": ""
     }
 ]
