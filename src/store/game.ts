@@ -14,23 +14,20 @@ const gameSlice = createSlice({
         },
         turn: 0,
         units: [] as Unit[],
-        action: {} as { action: string, target: any }
     },
     reducers : {
         setUnits: (state, action) => {
             state.units = action.payload
         },
         updateUnit: (state, action) => {
-            const { name, attribute } = action.payload
+            const { name, attribute, } = action.payload
             // Find the unit by name
             const unit = state.units.find((unit) => unit.name === name)
             if (unit) {
                 // Update the unit's attributes
-                unit.attribute = { ...unit.attribute, ...attribute }
+                unit.attribute = { ...unit.attribute, ...attribute  }
+                unit.action = action.payload.action
             }
-        },
-        setAction: (state, action) => {
-            state.action = action.payload
         },
         setTension: (state, action) => {
             if(action.payload.current)
@@ -42,5 +39,5 @@ const gameSlice = createSlice({
     }
 })
 
-export const { setUnits, updateUnit, setAction, setTension } = gameSlice.actions
+export const { setUnits, updateUnit, setTension } = gameSlice.actions
 export default gameSlice.reducer
