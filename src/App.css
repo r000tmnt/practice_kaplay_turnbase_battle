@@ -81,6 +81,13 @@ body {
   /* width: 100%; */
 }
 
+.back{
+  top: unset;
+  bottom: 0;
+  transform-origin: bottom;
+  transition: all 0.3s ease-in-out;
+}
+
 .avatar{
   padding: 5%;
 }

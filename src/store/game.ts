@@ -14,6 +14,7 @@ const gameSlice = createSlice({
         },
         turn: 0,
         units: [] as Unit[],
+        currentActivePlayer: -1,
     },
     reducers : {
         setUnits: (state, action) => {
@@ -22,12 +23,13 @@ const gameSlice = createSlice({
         updateUnit: (state, action) => {
             const { name, attribute, } = action.payload
             // Find the unit by name
-            const unit = state.units.find((unit) => unit.name === name)
-            if (unit) {
-                // Update the unit's attributes
-                unit.attribute = { ...unit.attribute, ...attribute  }
-                unit.action = action.payload.action
-            }
+            state.units.map((unit) => {
+                if(unit.name === name){
+                    return { ...unit, attribute, action: action.payload.action }
+                }
+
+                return unit // Return the original item if no update is needed
+            })
         },
         setTension: (state, action) => {
             if(action.payload.current)
@@ -35,9 +37,12 @@ const gameSlice = createSlice({
 
             if(action.payload.max)
                 state.tension.max += action.payload.max            
+        },
+        setCurrentActivePlayer: (state, action) => {
+            state.currentActivePlayer = action.payload
         }
     }
 })
 
-export const { setUnits, updateUnit, setTension } = gameSlice.actions
+export const { setUnits, updateUnit, setTension, setCurrentActivePlayer } = gameSlice.actions
 export default gameSlice.reducer

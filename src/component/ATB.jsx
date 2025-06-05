@@ -29,6 +29,7 @@ export default function ATB({
     const units = useSelector(state => state.game.units)
     const gameWidth = useSelector(state => state.setting.width)   
     // const scale = useSelector(state => state.setting.scale)
+    const [firstTime, setFirstTime] = useState(true)
 
     // const atbBarsAnimate = ($el, unit, index) => {
     //     // console.log($el)
@@ -186,7 +187,7 @@ export default function ATB({
     const waitConstructor = (index, unit, action, callBack=null) => {
         setTimers((prevState) =>{
             if(prevState && !prevState.find((t) => t.index === index)){
-                const time = (unit.action === 'defense')? 0 : unit.attribute.act * 10
+                const time = (units[index].action === 'defense')? 0 : unit.attribute.act * 10
 
                 return [
                     ...prevState,
@@ -197,7 +198,7 @@ export default function ATB({
                                action() 
                             } catch (error) {
                                 console.log(error)
-                                console.log('unit action error', unit)
+                                console.log('unit action error', units[index])
                             }
                             
                         }).onEnd(() => {
@@ -230,9 +231,9 @@ export default function ATB({
     useEffect(() => {
         if(Object.keys(reStart).length === 0) return
         console.log(reStart)
-        const {unit, index, display, controller, callBack } = reStart
-        if(display) loopConstructor(index, unit, controller, callBack)
-        else waitConstructor(index, unit, controller, callBack)
+        const {unit, index, display, action, callBack } = reStart
+        if(display) loopConstructor(index, unit, action, callBack)
+        else waitConstructor(index, unit, action, callBack)
     }, [reStart])
 
     useEffect(() => {
@@ -244,8 +245,9 @@ export default function ATB({
     }, [pause])
 
     useEffect(() => {
-        if(units.length === 10){
+        if(units.length === 10 && firstTime){
             units.forEach((unit, index) => loopConstructor(index, unit))
+            setFirstTime(false)
         }
     }, [units])
 

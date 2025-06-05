@@ -42,11 +42,15 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position}
                 index: pointedTarget
             })
         }else{
-            if(currentActivePlayer === undefined) return
-            setTarget({
-                position: 0,
-                index: currentActivePlayer
-            })
+            if(currentActivePlayer < 0){
+                // Reset the position
+                setTarget({})   
+            }else{
+                setTarget({
+                    position: 0,
+                    index: currentActivePlayer
+                })                
+            }
         }
     }, [currentActivePlayer, pointedTarget])
 
