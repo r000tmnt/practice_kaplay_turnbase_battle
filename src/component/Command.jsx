@@ -8,6 +8,7 @@ export default function Command({currentActivePlayer, notifyParent}) {
       <>
         <div className={`command ui ${currentActivePlayer >= 0 && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }} >
           <div className='avatar'>
+            { currentActivePlayer >= 0? units[currentActivePlayer].name : '' }
             <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
             <div className='meter'>
               <label>

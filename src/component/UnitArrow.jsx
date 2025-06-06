@@ -42,17 +42,22 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position}
                 index: pointedTarget
             })
         }else{
-            if(currentActivePlayer < 0){
-                // Reset the position
-                setTarget({})   
-            }else{
-                setTarget({
-                    position: 0,
-                    index: currentActivePlayer
-                })                
-            }
+            // Reset position
+            setTarget({})   
         }
-    }, [currentActivePlayer, pointedTarget])
+    }, [pointedTarget])
+
+    useEffect(() => {
+        if(currentActivePlayer >= 0){
+            setTarget({
+                position: 0,
+                index: currentActivePlayer
+            })   
+        }else{
+            // Reset position
+            setTarget({})   
+        }
+    }, [currentActivePlayer])
 
     return(
         (Object.keys(target).length > 0)?

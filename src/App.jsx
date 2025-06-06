@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import './App.css'
 import k from './lib/kaplay';
 
@@ -99,13 +99,15 @@ if(typeof window !== 'undefined') initScene()
 function App() {
   const [bg, setBg] = useState({})
   const [position, setPosition] = useState([])
-  const [atbBarToAct, setAtbBarToAct] = useState({})
+  const positionRef = useRef(null)
   const [timerToAct, setTimerToAct] = useState({})
   const [unitSprites, setunitSprites] = useState([])
+  const spriteRef = useRef(null)
   const [activeUnits, setActiveUnit] = useState([])
   const next = useMemo(() => activeUnits.find(a => a < 5), [activeUnits])
   const previousActiveUnits = useMemo(() => activeUnits, [activeUnits])
   const [pointedTarget, setPointedTarget] = useState(-1)
+  const target = useMemo(() => pointedTarget, [pointedTarget])
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
@@ -114,6 +116,8 @@ function App() {
   const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
 
   const dispatch = useDispatch()
+
+  const atbRef = useRef(null)
 
   // #region Scale UI
   // Reference from: https://jslegenddev.substack.com/p/how-to-display-an-html-based-ui-on
@@ -193,6 +197,11 @@ function App() {
     // The max number needs to be change by the battle
     if(position.length === 2 && !units.length){
       console.log('position')
+
+      // Update position ref
+      if(!positionRef.current) positionRef.current = position
+      else return
+
       const zoom = 1.5
       let player = []
       try {
@@ -224,6 +233,13 @@ function App() {
         dispatch(
           setUnits(player)            
         )
+
+        // Set ATB bars 
+        player.forEach((p, index) => {
+          if(atbRef.current){
+            atbRef.current.loopConstructor(index, p, position)
+          }
+        })
       } catch (error) {
         console.log('Error:', error)
       }
@@ -240,10 +256,11 @@ function App() {
     const action = actions[Math.floor(rng)]
 
     const input = {
-      unit, index,
-      display: false,
       action: null,
-      callback: () => setAtbBarToAct({unit, index, display: true})
+      callback: () => {
+        console.log(unit.name, 'callback loop')
+        if(atbRef.current) atbRef.current.loopConstructor(index, unit, positionRef.current)
+      }
     }
 
     // Keep tracking action
@@ -255,8 +272,8 @@ function App() {
     switch (action) {
       case 'attack':{
           // Choose a player
-          const target = Math.floor(Math.random() * 4)
-
+          const target = Math.round(Math.random() * 4)
+          const units = store.getState().game.units
           input.action = function(){ controller(() => attack(unit, units[target], index, target), index ) } 
         }
         break
@@ -278,9 +295,13 @@ function App() {
       default:
         input.action = function(){ controller(() => { console.log('Enemy attack')}, index ) } 
         break
-    }    
+    }
 
-    setAtbBarToAct(input)
+    setActiveUnit(prevState => prevState.filter(a => a !== index))
+
+    if(atbRef.current){
+      atbRef.current.waitConstructor(index, unit, input.action, input.callback)
+    }
   }
   // #endregion
 
@@ -327,7 +348,7 @@ function App() {
     // Create text
     const dmgText = add([
       text(dmg),
-      pos(unitSprites[tindex].pos.x + (128 / 2), unitSprites[tindex].pos.y - 50),
+      pos(spriteRef.current[tindex].pos.x + (128 / 2), spriteRef.current[tindex].pos.y - 50),
       opacity(1)
     ])
 
@@ -351,7 +372,7 @@ function App() {
         // TODO - Unit lose animation
 
         // Remove sprite
-        unitSprites[tindex].destroy()
+        spriteRef.current[tindex].destroy()
 
         dispatch(
           setTension({ current: 5 })
@@ -361,10 +382,6 @@ function App() {
           setTension({ current: 1 })
         )
       }
-
-      // Restart the ATB bar for the unit
-      // TODO - Need TO know when to use the player index or enemy index
-      setAtbBarToAct({ unit, index: uIndex, display: true })
     })
   }
   // #endregion
@@ -394,7 +411,7 @@ function App() {
             }
           }
 
-          if(target >= 0) setPointedTarget(target - 5)
+          if(target > 0) setPointedTarget(target - 5)
         }
         break
       case 'skill': {
@@ -418,55 +435,68 @@ function App() {
     } 
   }
 
-  const spriteClickEvent = onClick('unit', () => {
-    if(pointedTarget < 0 || currentActivePlayer < 0) return
+  const spriteClickEvent = onClick('unit', (sprite) => {
+    // Get the latest state
+    const currentActivePlayer = store.getState().game.currentActivePlayer
 
-    // Reset action value
-    dispatch(updateUnit({ name: unit.name, attribute: unit.attribute, action: '' }))  
+    if(currentActivePlayer < 0) return
+
+    const target = Number(sprite.tags.find((tag) => tag.includes('index_')).split('_')[1])
 
     // Get the latest state
-    const unit = store.getState().game.units[currentActivePlayer]
+    const units = store.getState().game.units
+    const unit = units[currentActivePlayer] 
+
+    if(unit && !unit.action.length) return
 
     const input = {
-      unit: unit, 
-      index: currentActivePlayer,
-      display: false,
       action: null,
-      callback: () => setAtbBarToAct({unit: unit, index: currentActivePlayer, display: true})
+      callback: () => {
+        if(atbRef.current) atbRef.current.loopConstructor(currentActivePlayer, unit, position)
+      }
     }
 
     switch(unit.action){
       case 'attack':{
-          input.action = function(){ 
-            controller(
-              () => attack(unit, units[pointedTarget + 5], currentActivePlayer, pointedTarget + 5), 
-              currentActivePlayer,
-            ) 
+          if(Number(target) > 4){
+            input.action = function(){ 
+              controller(
+                () => attack(unit, units[pointedTarget + 5], currentActivePlayer, pointedTarget + 5), 
+                currentActivePlayer,
+                // Reset action value
+                () => dispatch(updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })) 
+              ) 
+            }
+            setPointedTarget(-1)
+            spriteHoverEvent.paused = true
+            spriteClickEvent.paused = true            
           }
-          setPointedTarget(-1)
-          spriteHoverEvent.paused = true
-          spriteClickEvent.paused = true
       }
       break;
     }
 
     setActiveUnit((prevState) => prevState.filter((a) => a !== currentActivePlayer))
+    if(atbRef.current){
+      atbRef.current.waitConstructor(currentActivePlayer, unit, input.action, input.callback)
+    }    
     dispatch(setCurrentActivePlayer(-1))
-    setAtbBarToAct(input)
   })
   // Default to paused
   spriteClickEvent.paused = true
 
   const spriteHoverEvent = onHover('unit', (unit) => {
-    if(currentActivePlayer < 0) return
-
     // Get the latest state
+    const currentActivePlayer = store.getState().game.currentActivePlayer
     const units = store.getState().game.units[currentActivePlayer]
 
+    if(currentActivePlayer < 0 || units && !units.action.length) return
+
+    console.log('currentActivePlayer ', currentActivePlayer)
+
     switch(units.action){
-      case 'attack': case 'skill': {
+      case 'attack': {
         const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
-        if(target >= 0) setPointedTarget(target - 5)
+        if(target > 4) setPointedTarget(target - 5)
       }
       break;
     }
@@ -479,8 +509,9 @@ function App() {
     const currentActivePlayer = store.getState().game.currentActivePlayer
 
     if(currentActivePlayer < 0){
+      console.log('Set the next acting player ', activeUnits)
       // Set the next acting player
-      wait(0.3, () => {
+      wait(1, () => {
         if(next) dispatch(setCurrentActivePlayer(next))
       })      
     }
@@ -489,14 +520,22 @@ function App() {
 
   // #region ATB
   const onAtbBarFinished = (unit, index) => {
+    if(previousActiveUnits.find(a => a === index)) return
     setActiveUnit((prevState) => [...prevState, index])
     if(index > 4){
-      enemyAI(unit, index)
+      wait(Math.round(Math.random() * 2) + 1, () => {
+        enemyAI(unit, index)
+      })
     }else{
       if(currentActivePlayer < 0) dispatch(setCurrentActivePlayer(index))
     }
   }
   // #endregion
+
+  useEffect(() => {
+    // console.log(unitSprites)
+    spriteRef.current = unitSprites
+  }, [unitSprites])
 
   return (
     <>
@@ -506,10 +545,9 @@ function App() {
       <BattleCounter />
 
       <ATB 
-        position={position} 
         previousActiveUnits={previousActiveUnits} 
         notifyParent={onAtbBarFinished} 
-        reStart={atbBarToAct}
+        ref={atbRef}
         pause={timerToAct}
       />
 

@@ -1,7 +1,7 @@
-import { useState, useMemo, useEffect } from "react"
+import { useState, useMemo, useEffect, useImperativeHandle } from "react"
 import { useSelector } from "react-redux"
 import k from '../lib/kaplay'
-// import unit from "../data/unit"
+import store from "../store/store"
 
 const { 
     add,
@@ -18,18 +18,15 @@ const {
 } = k
 
 export default function ATB({
-    position, 
     previousActiveUnits, 
     notifyParent, 
-    reStart, // Set witch the unit and index to restart the timer
+    ref, // Set witch the unit and index to restart the timer
     pause, // Pause timers other than one that is running,
 }) {
     const [timers, setTimers] = useState([])
     const previousSetTimers = useMemo(() => timers, [timers])
-    const units = useSelector(state => state.game.units)
     const gameWidth = useSelector(state => state.setting.width)   
     // const scale = useSelector(state => state.setting.scale)
-    const [firstTime, setFirstTime] = useState(true)
 
     // const atbBarsAnimate = ($el, unit, index) => {
     //     // console.log($el)
@@ -103,9 +100,9 @@ export default function ATB({
     //     })
     // }, [timers])
 
-    const loopConstructor = (index, unit, controller=null, callBack=null) => {
-        
-        if(previousActiveUnits.includes(index)) return
+    const loopConstructor = (index, unit, position, controller=null, callBack=null) => {
+        console.log(index)
+        if(previousActiveUnits.find(a => a === index)) return
 
         if(previousSetTimers.find((t) => t.index === index)) return
 
@@ -121,8 +118,9 @@ export default function ATB({
         ])
 
         wait(1, () => {
+            console.log(index, 'after wait')
             setTimers((prevState) =>{
-                if(prevState && !prevState.find((t) => t.index === index)){
+                if(prevState && prevState.findIndex((t) => t.index === index) < 0){
                     const time = unit.attribute.act * 100
 
                     let percentage = 0
@@ -134,6 +132,8 @@ export default function ATB({
                         color(10, 130, 180)                            
                     ])    
 
+                    console.log(unit.name, 'set up loop', performance.now())
+
                     return [
                         ...prevState,
                         {
@@ -143,15 +143,14 @@ export default function ATB({
                             controller(callBack) :
                             loop(0.1, () => {
                                 count += 1
-                                console.log(count)
+                                // console.log(count)
                                 if(count > time){
                                     const theTimer = timers.find(t => t.index === index)
                                     if(theTimer){
                                         theTimer.controller.cancel()
                                         if(callBack) { callBack() } 
-                                        else {
-                                        timerEndAction(unit, index)      
-                                        }
+                                        else timerEndAction(unit, index)      
+                                        
                                         wrapper.destroy()
                                         bar.destroy()                                                          
                                     }
@@ -163,18 +162,17 @@ export default function ATB({
                                 } 
                             }, time).onEnd(() => {
                                 if(callBack) { callBack() } 
-                                else {
-                                timerEndAction(unit, index)      
-                                }
+                                else timerEndAction(unit, index)      
+                                
                                 wrapper.destroy()
                                 bar.destroy()
                             })
                         }
                     ]
                 }else{
-                    console.log('timer error', prevState)
+                    console.log(unit.name, 'loop timer error', prevState)
                     // Return the current timers if error
-                    return [ ...timers ]
+                    return prevState
                 }
             })            
         })
@@ -186,8 +184,11 @@ export default function ATB({
     
     const waitConstructor = (index, unit, action, callBack=null) => {
         setTimers((prevState) =>{
-            if(prevState && !prevState.find((t) => t.index === index)){
+            if(prevState && prevState.findIndex((t) => t.index === index) < 0){
+                const units = store.getState().game.units
                 const time = (units[index].action === 'defense')? 0 : unit.attribute.act * 10
+
+                console.log(unit.name, 'set up wait')
 
                 return [
                     ...prevState,
@@ -208,33 +209,33 @@ export default function ATB({
                     }
                 ]
             }else{
-                console.log('timer error', prevState)
+                console.log(unit.name, 'wait timer error', prevState)
                 // Return the current timers if error
-                return [ ...timers ]
+                return prevState
             }
         })        
     }
     
     const timerEndAction = (unit, index) => {
-    // console.log(unit.name, 'Done after', time * 0.1, 's')
-    // $el.children[0].style.width = '100%'
-    // $el.children[0].classList.add('done')
-
-    // Notify the parent with the index
-    notifyParent(unit, index)
-    // Remove the timer
-    setTimers((prevState) => prevState.filter((t) => t.index !== index))
-    // Hide the bar
-    // $el.style.display = 'none'
+        // console.log(unit.name, 'Done after', time * 0.1, 's')
+        // $el.children[0].style.width = '100%'
+        // $el.children[0].classList.add('done')
+        console.log(unit.name, 'timer end')
+        // Notify the parent with the index
+        notifyParent(unit, index)
+        // Remove the timer
+        setTimers((prevState) => prevState.filter((t) => t.index !== index))
+        // Hide the bar
+        // $el.style.display = 'none'
     }    
 
-    useEffect(() => {
-        if(Object.keys(reStart).length === 0) return
-        console.log(reStart)
-        const {unit, index, display, action, callBack } = reStart
-        if(display) loopConstructor(index, unit, action, callBack)
-        else waitConstructor(index, unit, action, callBack)
-    }, [reStart])
+    // useEffect(() => {
+    //     if(Object.keys(reStart).length === 0) return
+    //     console.log(reStart)
+    //     const {unit, index, display, action, callBack } = reStart
+    //     if(display) loopConstructor(index, unit, action, callBack)
+    //     else waitConstructor(index, unit, action, callBack)
+    // }, [reStart])
 
     useEffect(() => {
         if(Object.keys(pause).length === 0) return
@@ -244,12 +245,19 @@ export default function ATB({
         })
     }, [pause])
 
-    useEffect(() => {
-        if(units.length === 10 && firstTime){
-            units.forEach((unit, index) => loopConstructor(index, unit))
-            setFirstTime(false)
-        }
-    }, [units])
+    useImperativeHandle(ref, () => {
+        return { 
+            loopConstructor,
+            waitConstructor
+         }
+    }, [])
+
+    // useEffect(() => {
+    //     if(units.length === 10 && firstTime){
+    //         units.forEach((unit, index) => loopConstructor(index, unit))
+    //         setFirstTime(false)
+    //     }
+    // }, [units])
 
     // return (
     //     units.map((u, index) => {

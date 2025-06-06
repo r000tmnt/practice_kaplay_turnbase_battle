@@ -25,10 +25,9 @@ const gameSlice = createSlice({
             // Find the unit by name
             state.units.map((unit) => {
                 if(unit.name === name){
-                    return { ...unit, attribute, action: action.payload.action }
+                    unit.attribute = { ...attribute }
+                    unit.action = action.payload.action
                 }
-
-                return unit // Return the original item if no update is needed
             })
         },
         setTension: (state, action) => {
