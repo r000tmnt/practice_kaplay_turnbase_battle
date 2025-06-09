@@ -1,8 +1,10 @@
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import { updateUnit } from "../store/game"
 
 export default function Command({currentActivePlayer, notifyParent}) {
     const units = useSelector(state => state.game.units)
     const gameWidth = useSelector(state => state.setting.width)   
+    const dispatch = useDispatch()
 
     return(
       <>
@@ -47,7 +49,10 @@ export default function Command({currentActivePlayer, notifyParent}) {
           </div>
         </div>
 
-        <button className={`back ui ${currentActivePlayer >= 0 && units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>BACK</button>      
+        <button 
+          className={`back ui ${currentActivePlayer >= 0 && units[currentActivePlayer].action.length? 'show' : 'hide'}`} 
+          style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}
+          onClick={() => dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))}>BACK</button>      
       </>
     )
 }

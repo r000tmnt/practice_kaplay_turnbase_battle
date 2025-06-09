@@ -18,7 +18,7 @@ const {
 } = k
 
 export default function ATB({
-    previousActiveUnits, 
+    activeUnits, 
     notifyParent, 
     ref, // Set witch the unit and index to restart the timer
     pause, // Pause timers other than one that is running,
@@ -34,7 +34,7 @@ export default function ATB({
     //     if(!$el) return
        
     //     // If the unit is in the active stack
-    //     if(previousActiveUnits.includes(index)) return
+    //     if(activeUnits.includes(index)) return
     
     //     // If the timer is set already
     //     if(previousSetTimers.find((t) => t.index === index)) return
@@ -83,7 +83,7 @@ export default function ATB({
 
     // useEffect(() => {
     //     timers.forEach((timer) => {
-    //         if(previousActiveUnits.includes(timer.index)) return
+    //         if(activeUnits.includes(timer.index)) return
 
     //         // if(previousSetTimers.find((t) => t.index === timer.index)) return
 
@@ -102,23 +102,25 @@ export default function ATB({
 
     const loopConstructor = (index, unit, position, controller=null, callBack=null) => {
         console.log(index)
-        if(previousActiveUnits.find(a => a === index)) return
-
-        if(previousSetTimers.find((t) => t.index === index)) return
-
-        const side = (index < 5)? 0 : 1
-        const sideIndex = (index < 5)? index : index - 5                
-        const width = gameWidth * 0.1
-        const height = (gameWidth * 0.1)/10
-
-        const wrapper = add([
-            rect(width, height),
-            pos(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),       
-            color(0, 0, 0)                            
-        ])
 
         wait(1, () => {
             console.log(index, 'after wait')
+
+            if(activeUnits.find(a => a === index)) return
+
+            if(previousSetTimers.find((t) => t.index === index)) return
+    
+            const side = (index < 5)? 0 : 1
+            const sideIndex = (index < 5)? index : index - 5                
+            const width = gameWidth * 0.1
+            const height = (gameWidth * 0.1)/10
+    
+            const wrapper = add([
+                rect(width, height),
+                pos(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),       
+                color(0, 0, 0)                            
+            ])
+
             setTimers((prevState) =>{
                 if(prevState && prevState.findIndex((t) => t.index === index) < 0){
                     const time = unit.attribute.act * 100
@@ -127,7 +129,7 @@ export default function ATB({
                     let count = 0
 
                     const bar = add([
-                        rect(width * percentage, height),
+                        rect(percentage, height),
                         pos(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),
                         color(10, 130, 180)                            
                     ])    
@@ -155,9 +157,10 @@ export default function ATB({
                                         bar.destroy()                                                          
                                     }
                                 }else{
-                                    percentage += Math.floor(100/time)
-                                    // bar.width = width * percentage
-                                    tween(bar.width, percentage, 0, (p) => bar.width = p, easings.linear)
+                                    const add = Math.floor(100/time)
+                                    percentage = (percentage + add > 100)? 100 : percentage + add
+                                    const newWidth = width * (percentage/100)
+                                    tween(bar.width, newWidth, 0, (p) => bar.width = p, easings.linear)
 
                                 } 
                             }, time).onEnd(() => {
@@ -170,7 +173,7 @@ export default function ATB({
                         }
                     ]
                 }else{
-                    console.log(unit.name, 'loop timer error', prevState)
+                    // console.log(unit.name, 'loop timer error', prevState)
                     // Return the current timers if error
                     return prevState
                 }
@@ -179,7 +182,15 @@ export default function ATB({
     }   
 
     // useEffect(() => {
-    //     console.log(timers)
+    //     // console.log(timers)
+    //     // Check if the timers duplicated
+    //     setTimers(prevState => {
+    //         return prevState.filter((timer, index) => {
+    //             const matched = prevState.findIndex(t => t.index === index) === index
+    //             if(!matched) timer.controller?.destroy()
+    //             else return timer 
+    //         })
+    //     })
     // }, [timers])
     
     const waitConstructor = (index, unit, action, callBack=null) => {
@@ -209,7 +220,7 @@ export default function ATB({
                     }
                 ]
             }else{
-                console.log(unit.name, 'wait timer error', prevState)
+                // console.log(unit.name, 'wait timer error', prevState)
                 // Return the current timers if error
                 return prevState
             }

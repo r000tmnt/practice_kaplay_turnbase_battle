@@ -105,9 +105,8 @@ function App() {
   const spriteRef = useRef(null)
   const [activeUnits, setActiveUnit] = useState([])
   const next = useMemo(() => activeUnits.find(a => a < 5), [activeUnits])
-  const previousActiveUnits = useMemo(() => activeUnits, [activeUnits])
   const [pointedTarget, setPointedTarget] = useState(-1)
-  const target = useMemo(() => pointedTarget, [pointedTarget])
+  // const target = useMemo(() => pointedTarget, [pointedTarget])
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
@@ -278,22 +277,22 @@ function App() {
         }
         break
       case 'skill':
-        input.action = function(){ controller(() => { console.log('Enemy skill')}, index ) } 
+        input.action = function(){ controller(async() => { console.log('Enemy skill')}, index ) } 
         break
       case 'item':
-        input.action = function(){ controller(() => { console.log('Enemy item')}, index ) } 
+        input.action = function(){ controller(async() => { console.log('Enemy item')}, index ) } 
         break
       case 'defense':
-        input.action = function(){ controller(() => { console.log('Enemy defense')}, index ) } 
+        input.action = function(){ controller(async() => { console.log('Enemy defense')}, index ) } 
         break
       case 'change':
-        input.action = function(){ controller(() => { console.log('Enemy change')}, index ) } 
+        input.action = function(){ controller(async() => { console.log('Enemy change')}, index ) } 
         break
       case 'escape':
-        input.action = function(){ controller(() => { console.log('Enemy escape')}, index ) } 
+        input.action = function(){ controller(async() => { console.log('Enemy escape')}, index ) } 
         break
       default:
-        input.action = function(){ controller(() => { console.log('Enemy attack')}, index ) } 
+        input.action = function(){ controller(async() => { console.log('Enemy attack')}, index ) } 
         break
     }
 
@@ -309,11 +308,12 @@ function App() {
   const controller = (actionFunction, index, actionCallBack = null) => {
     // Pause timers of the other units
     setTimerToAct({ index, value: true })
-    actionFunction()
-
-    if(actionCallBack) actionCallBack()
-    // Resume timers of the other units
-    setTimerToAct({ index, value: false })
+    
+    actionFunction().then(() => {
+      if(actionCallBack) actionCallBack()
+      // Resume timers of the other units
+      setTimerToAct({ index, value: false })      
+    })
   }
 
   /**
@@ -323,7 +323,7 @@ function App() {
    * @param {number} uindex - The index of the player unit in the unitSprites array
    * @param {number} tindex - The index of the enemy unit in the unitSprites array
    */
-  const attack = (unit, target, uIndex, tindex) => {
+  const attack = async (unit, target, uIndex, tindex) => {
     let dmg = (unit.attribute.inFight + Math.floor(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.floor(target.attribute.def * (target.attribute.def / 100))
     dmg += Math.floor(dmg * (tension.current / 100)) // Add tension bonus
 
@@ -441,18 +441,19 @@ function App() {
 
     if(currentActivePlayer < 0) return
 
+    // Get the index of the clicked sprite
     const target = Number(sprite.tags.find((tag) => tag.includes('index_')).split('_')[1])
 
     // Get the latest state
     const units = store.getState().game.units
-    const unit = units[currentActivePlayer] 
+    const unit = store.getState().game.units[currentActivePlayer] 
 
     if(unit && !unit.action.length) return
 
     const input = {
       action: null,
       callback: () => {
-        if(atbRef.current) atbRef.current.loopConstructor(currentActivePlayer, unit, position)
+        if(atbRef.current) atbRef.current.loopConstructor(currentActivePlayer, unit, positionRef.current)
       }
     }
 
@@ -491,7 +492,7 @@ function App() {
 
     if(currentActivePlayer < 0 || units && !units.action.length) return
 
-    console.log('currentActivePlayer ', currentActivePlayer)
+    // console.log('currentActivePlayer ', currentActivePlayer)
 
     switch(units.action){
       case 'attack': {
@@ -504,15 +505,18 @@ function App() {
   // Default to paused
   spriteHoverEvent.paused = true
 
+  // Listen to activeUnit changes
   useEffect(() => {
     // Get the latest state
     const currentActivePlayer = store.getState().game.currentActivePlayer
 
     if(currentActivePlayer < 0){
-      console.log('Set the next acting player ', activeUnits)
       // Set the next acting player
       wait(1, () => {
-        if(next) dispatch(setCurrentActivePlayer(next))
+        if(next !== undefined){
+          console.log('Set the next acting player ', activeUnits)
+          dispatch(setCurrentActivePlayer(next))
+        } 
       })      
     }
   }, [activeUnits])
@@ -520,14 +524,13 @@ function App() {
 
   // #region ATB
   const onAtbBarFinished = (unit, index) => {
-    if(previousActiveUnits.find(a => a === index)) return
+    if(activeUnits.find(a => a === index) !== undefined) return
     setActiveUnit((prevState) => [...prevState, index])
     if(index > 4){
+      // Set enemy action after 1 to 3 seconds most
       wait(Math.round(Math.random() * 2) + 1, () => {
         enemyAI(unit, index)
       })
-    }else{
-      if(currentActivePlayer < 0) dispatch(setCurrentActivePlayer(index))
     }
   }
   // #endregion
@@ -545,7 +548,7 @@ function App() {
       <BattleCounter />
 
       <ATB 
-        previousActiveUnits={previousActiveUnits} 
+        activeUnits={activeUnits} 
         notifyParent={onAtbBarFinished} 
         ref={atbRef}
         pause={timerToAct}
