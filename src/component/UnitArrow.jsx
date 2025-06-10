@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useSelector } from "react-redux"
 import k from '../lib/kaplay'
 
@@ -7,19 +7,20 @@ const { loop } = k
 export default function UnitArrow({currentActivePlayer, pointedTarget, position}) {
     const gameWidth = useSelector(state => state.setting.width)
     const scale = useSelector(state => state.setting.scale)  
-    const [animation, setAnimation] = useState({})
     const [target, setTarget] = useState({})
+    const animation = useRef({})
     
     const setRotate3d = ($el) => {
         if(!$el) return
-        // If the element is already animated, keep the  running
-        if(Object.keys(animation).length > 0) return
+        // If the element is already animated, keep it running
+        if(animation.current.$el && animation.current.$el.dataset['time'] === $el.dataset['time']) return
 
         // Rotate the element every 100ms
         const time = 360/10
         let deg = 0
-        setAnimation(
-            loop(0.1, () => {
+        animation.current = {
+            $el,
+            controller: loop(0.1, () => {
                 if(deg === 360) deg = 0
             
                 if($el.style.transform.includes('rotate3d')){
@@ -32,7 +33,17 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position}
                     $el.style.transform += ` rotate3d(0, 1, 0, ${deg}deg)`
                 }
             })
-        )
+        }
+    }
+
+    const reset = () => {
+        // Reset position
+        setTarget({})  
+        // Stop animation
+        if(animation.current && Object.keys(animation.current).length > 0){
+            if(animation.current.controller) animation.current.controller.cancel()
+            // animation.current.$el.remove()
+        }
     }
 
     useEffect(() => {
@@ -41,10 +52,7 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position}
                 position: 1,
                 index: pointedTarget
             })
-        }else{
-            // Reset position
-            setTarget({})   
-        }
+        }else reset()
     }, [pointedTarget])
 
     useEffect(() => {
@@ -53,27 +61,29 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position}
                 position: 0,
                 index: currentActivePlayer
             })   
-        }else{
-            // Reset position
-            setTarget({})   
-        }
+        }else reset()
     }, [currentActivePlayer])
 
     return(
-        (Object.keys(target).length > 0)?
-        <div 
-        className='arrow-down ui'
-        ref={($el) => setRotate3d($el)}
-        style={{
-            width: `${(gameWidth * 0.05) * scale}px`,
-            fontSize: `${(gameWidth * 0.05) * scale}px`,
-            left: `${((window.innerWidth - (gameWidth * scale)) / 2)}px`,            
-            transform: `
-                translate(
-                    ${(position[target.position][target.index].pos.x + ((gameWidth * 0.05)/4)) * scale}px, 
-                    ${(position[target.position][target.index].pos.y - (128 / 2) - 40) * scale}px)
-            `,
-        }}>&#11167;</div>
-        : null
+        <>
+            {
+                (Object.keys(target).length > 0)?
+                <div 
+                className='arrow-down ui'
+                ref={($el) => setRotate3d($el)}
+                data-time={new Date().getTime()}
+                style={{
+                    width: `${(gameWidth * 0.05) * scale}px`,
+                    fontSize: `${(gameWidth * 0.05) * scale}px`,
+                    left: `${((window.innerWidth - (gameWidth * scale)) / 2)}px`,            
+                    transform: `
+                        translate(
+                            ${(position[target.position][target.index].pos.x + ((gameWidth * 0.05)/4)) * scale}px, 
+                            ${(position[target.position][target.index].pos.y - (128 / 2) - 40) * scale}px)
+                    `,
+                }}>&#11167;</div>
+                : null
+            }
+        </>
     )
 }
