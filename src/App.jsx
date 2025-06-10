@@ -101,8 +101,7 @@ function App() {
   const [position, setPosition] = useState([])
   const positionRef = useRef(null)
   const [timerToAct, setTimerToAct] = useState({})
-  const [unitSprites, setunitSprites] = useState([])
-  const spriteRef = useRef(null)
+  const spriteRef = useRef([])
   const [activeUnits, setActiveUnit] = useState([])
   const next = useMemo(() => activeUnits.find(a => a < 5), [activeUnits])
   const [pointedTarget, setPointedTarget] = useState(-1)
@@ -214,21 +213,21 @@ function App() {
             // 128px is the height of the sprite
             // 20px is the height of the rect
             player.push({...data})
-            setunitSprites((prevState) => [
-              ...prevState, 
+            spriteRef.current.push(
               add([
                 sprite('player', { flipX: (i > 0)? false : true }), 
                 pos(x - (128 / 2), y - (128 + 20)), 
                 scale(zoom),
+                opacity(1),
                 area(),
                 // tag
                 "unit",
                 `index_${(i > 0)? j + 5 : j}`
               ])
-            ] )
+            )
           }              
         }     
-        console.log('dispath', player)
+        // console.log('dispath', player)
         dispatch(
           setUnits(player)            
         )
@@ -324,19 +323,19 @@ function App() {
    * @param {number} tindex - The index of the enemy unit in the unitSprites array
    */
   const attack = async (unit, target, uIndex, tindex) => {
-    let dmg = (unit.attribute.inFight + Math.floor(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.floor(target.attribute.def * (target.attribute.def / 100))
-    dmg += Math.floor(dmg * (tension.current / 100)) // Add tension bonus
+    let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
+    dmg += Math.round(dmg * (tension.current / 100)) // Add tension bonus
 
     const crit = unit.attribute.luck / 100
 
     const rng = Math.random()
 
     if(rng <= crit){
-      dmg = Math.floor(dmg * 1.5)
+      dmg = Math.round(dmg * 1.5)
     }
 
     // If the target take defense
-    if(target.action === 'defense') dmg = Math.floor(dmg / 2)    
+    if(target.action === 'defense') dmg = Math.round(dmg / 2)    
 
     const attribute = JSON.parse(JSON.stringify(target.attribute))
     attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
@@ -357,9 +356,7 @@ function App() {
       dmgText.pos, 
       vec2(dmgText.pos.x, dmgText.pos.y - 50), 
       0.5,
-      (pos) => {
-        dmgText.pos = pos
-      },
+      (pos) => dmgText.pos = pos,
       easings.easeInOutQuad
     ).onEnd(() => {
       dmgText.destroy()
@@ -370,13 +367,22 @@ function App() {
 
       if(attribute.hp === 0) {
         // TODO - Unit lose animation
-
-        // Remove sprite
-        spriteRef.current[tindex].destroy()
+        tween(
+          spriteRef.current[tindex].opacity, 
+          0, 
+          0.5,
+          (o) => spriteRef.current[tindex].opacity = o, 
+          easings.linear
+        ).onEnd(() => {
+          // Remove sprite
+          spriteRef.current[tindex].destroy()
+        })
 
         dispatch(
           setTension({ current: 5 })
-        )        
+        )
+        
+        // TODO - If no more enemy in the scene
       }else{
         dispatch(
           setTension({ current: 1 })
@@ -439,7 +445,10 @@ function App() {
     // Get the latest state
     const currentActivePlayer = store.getState().game.currentActivePlayer
 
-    if(currentActivePlayer < 0) return
+    if(currentActivePlayer < 0) {
+      console.log('current active player error', currentActivePlayer)
+      return
+    }
 
     // Get the index of the clicked sprite
     const target = Number(sprite.tags.find((tag) => tag.includes('index_')).split('_')[1])
@@ -448,7 +457,10 @@ function App() {
     const units = store.getState().game.units
     const unit = store.getState().game.units[currentActivePlayer] 
 
-    if(unit && !unit.action.length) return
+    if(unit && !unit.action.length) {
+      console.log('unit action lost', unit)
+      return
+    }
 
     const input = {
       action: null,
@@ -462,10 +474,8 @@ function App() {
           if(Number(target) > 4){
             input.action = function(){ 
               controller(
-                () => attack(unit, units[pointedTarget + 5], currentActivePlayer, pointedTarget + 5), 
-                currentActivePlayer,
-                // Reset action value
-                () => dispatch(updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })) 
+                () => attack(unit, units[target], currentActivePlayer, target), 
+                currentActivePlayer
               ) 
             }
             setPointedTarget(-1)
@@ -481,6 +491,8 @@ function App() {
       atbRef.current.waitConstructor(currentActivePlayer, unit, input.action, input.callback)
     }    
     dispatch(setCurrentActivePlayer(-1))
+    // Reset action value
+    dispatch(updateUnit({ name: unit.name, attribute: unit.attribute, action: '' }))
   })
   // Default to paused
   spriteClickEvent.paused = true
@@ -515,7 +527,10 @@ function App() {
       wait(1, () => {
         if(next !== undefined){
           console.log('Set the next acting player ', activeUnits)
-          dispatch(setCurrentActivePlayer(next))
+          const unit = store.getState().game.units[next]
+          // Update unit state only when the action value is empty
+          if(!unit.action.length) dispatch(setCurrentActivePlayer(next))
+          // else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
         } 
       })      
     }
@@ -527,18 +542,15 @@ function App() {
     if(activeUnits.find(a => a === index) !== undefined) return
     setActiveUnit((prevState) => [...prevState, index])
     if(index > 4){
-      // Set enemy action after 1 to 3 seconds most
-      wait(Math.round(Math.random() * 2) + 1, () => {
-        enemyAI(unit, index)
-      })
+      if(unit.attribute.hp > 0){
+        // Set enemy action after 1 to 3 seconds most
+        wait(Math.round(Math.random() * 2) + 1, () => {
+          enemyAI(unit, index)
+        })        
+      }
     }
   }
   // #endregion
-
-  useEffect(() => {
-    // console.log(unitSprites)
-    spriteRef.current = unitSprites
-  }, [unitSprites])
 
   return (
     <>
