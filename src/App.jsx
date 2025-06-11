@@ -142,7 +142,7 @@ function App() {
   const [timerToAct, setTimerToAct] = useState({})
   const spriteRef = useRef([])
   const [activeUnits, setActiveUnit] = useState([])
-  const next = useMemo(() => activeUnits.find(a => a < 5), [activeUnits])
+  const next = useMemo(() => activeUnits.length? activeUnits.find(a => a < 5) : -1, [activeUnits])
   const [pointedTarget, setPointedTarget] = useState(-1)
   // const target = useMemo(() => pointedTarget, [pointedTarget])
 
@@ -412,13 +412,7 @@ function App() {
       }
 
       if(nextTarget) target = nextTarget
-      else
-      // Check if the enemy sprite is dispalyed
-      // if(spriteRef.current[tindex].opacity === 1){
-      //   // End the battle
-      //   unitLoseHandle(tindex)
-        return
-      // }
+      else return
     }
 
     let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
@@ -502,12 +496,17 @@ function App() {
       Array.from(5).forEach(i => atbRef.current.removeBar(i))
       // Empty activeUnit stack
       setActiveUnit([])          
-      if(wave.current !== wave.max){
-        console.log('next wave?')
-        dispatch(setWave(1))
-      }else{
-        // TODO - End of the battle
-      }
+      // Reset pointer
+      setPointedTarget(-1)
+      dispatch(setCurrentActivePlayer(-1))
+      wait(0.3, () => {
+        if(wave.current !== wave.max){
+          console.log('next wave?')
+          dispatch(setWave(1))
+        }else{
+          // TODO - End of the battle
+        }        
+      })
     }
 
     console.log('remaing', remain)
@@ -533,7 +532,7 @@ function App() {
         // Find available target
           let target = -1
           for(let i=5; i < 10; i++){
-            if(units[i].attribute.hp > 0){
+            if(units[i] && units[i].attribute.hp > 0){
               target = i
               break
             }
@@ -644,17 +643,15 @@ function App() {
     // Get the latest state
     const currentActivePlayer = store.getState().game.currentActivePlayer
 
-    if(currentActivePlayer < 0){
+    if(activeUnits.length && currentActivePlayer < 0){
       // Set the next acting player
-      wait(1, () => {
-        if(next !== undefined){
-          console.log('Set the next acting player ', activeUnits)
-          const unit = store.getState().game.units[next]
-          // Update unit state only when the action value is empty
-          if(!unit.action.length) dispatch(setCurrentActivePlayer(next))
-          else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
-        } 
-      })      
+      if(next !== undefined){
+        console.log('Set the next acting player ', activeUnits)
+        const unit = store.getState().game.units[next]
+        // Update unit state only when the action value is empty
+        if(!unit.action.length) dispatch(setCurrentActivePlayer(next))
+        else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
+      }   
     }
   }, [activeUnits])
   // #endregion
@@ -696,6 +693,10 @@ function App() {
           })          
         }
       })
+
+      // wait(0.5, () => {
+      //   drawCharacters()
+      // })
     }
   }, [wave])
   // #endregion
