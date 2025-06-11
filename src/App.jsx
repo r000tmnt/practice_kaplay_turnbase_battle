@@ -38,6 +38,7 @@ const {
   onClick,
   onHover,
   onUpdate,
+  onDraw,
   shader,
   outline,
   wait, 
@@ -53,7 +54,9 @@ const {
   BLACK,
   WHITE,
   RED,
+  drawUVQuad,
   width,
+  dt,
 } = k
 
 // const getStoreState = (target) => {
@@ -96,18 +99,33 @@ const initScene = () => {
     // )
 
     loadShader('waveTransition', null,
-      `uniform float u_time;
+      `precision mediump float;
+
+      uniform float u_time;
 
       vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
-          // Define a jagged edge using a sine wave
-          float wave = sin(uv.y * 40.0 + u_time * 10.0) * 0.05;
-          float cutoff = 1.0 - u_time * 1.5;
+          float progress = u_time * 0.5;
 
-          if (uv.x < cutoff + wave) {
-              return vec4(0.0, 0.0, 0.0, 1.0); // Black cover
+          // Width of the mask band (0.3 = ~30% of screen width)
+          float bandWidth = 1.0;
+
+          // Jagged shape (random noise via sin)
+          float bands = 20.0;
+          float band = floor(uv.y * bands);
+          float bandOffset = mod(band, 2.0) * 0.05;
+          float jag = sin(uv.y * 100.0 + progress * 10.0) * 0.02;
+
+          // Moving window edges
+          float head = 1.5 - progress + bandOffset + jag;              // right jagged edge
+          float tail = head - bandWidth;                               // left jagged edge
+
+          // Inside the band: draw black
+          if (uv.x > tail && uv.x < head) {
+              return vec4(0.0, 0.0, 0.0, 1.0);
           }
 
-          return texture2D(tex, uv) * color;
+          // Else: fully transparent
+          return vec4(0.0, 0.0, 0.0, 0.0);
       }`
     )
   })
@@ -236,13 +254,13 @@ function App() {
         const set = currentSets[j]
         console.log(set.pos)
         const { x, y } = set.pos
-        let data = {}
+        let data = null
         const index = (i > 0)? j + 5 : j
 
         if(wave.current > 1){
           const units = store.getState().game.units
           data = units[index]
-          if(i > 0 && data.attribute.hp === 0){
+          if(i > 0){
             // Refill the hp and mp
             data.attribute.hp = data.attribute.maxHp
             data.attribute.mp = data.attribute.maxMp
@@ -251,37 +269,39 @@ function App() {
           data = (i > 0)? unit.enemy[j] : unit.player[j]
         }
 
-        // 128px is the height of the sprite
-        // 20px is the height of the rect
-        player.push({...data})
-        if(wave.current === 1){
-          spriteRef.current.push(
-            add([
-              sprite('player', { flipX: (i > 0)? false : true }), 
-              pos(x - (128 / 2), y - (128 + 20)), 
-              scale(zoom),
-              opacity(1),
-              area(),
-              // tag
-              "unit",
-              `index_${index}`
-            ])
-          )          
-        }else{
-          // Recreate enemy sprite if destoryed
-          if(!spriteRef.current[index] && i > 0){
-            spriteRef.current[index] = add([
-              sprite('player', { flipX: (i > 0)? false : true }), 
-              pos(x - (128 / 2), y - (128 + 20)), 
-              scale(zoom),
-              opacity(1),
-              area(),
-              // tag
-              "unit",
-              `index_${index}`
-            ])
+        if(data){
+          // 128px is the height of the sprite
+          // 20px is the height of the rect
+          player.push({...data})
+          if(wave.current === 1){
+            spriteRef.current.push(
+              add([
+                sprite('player', { flipX: (i > 0)? false : true }), 
+                pos(x - (128 / 2), y - (128 + 20)), 
+                scale(zoom),
+                opacity(1),
+                area(),
+                // tag
+                "unit",
+                `index_${index}`
+              ])
+            )          
+          }else{
+            // Recreate enemy sprite if destoryed
+            if(!spriteRef.current[index] && i > 0){
+              spriteRef.current[index] = add([
+                sprite('player', { flipX: (i > 0)? false : true }), 
+                pos(x - (128 / 2), y - (128 + 20)), 
+                scale(zoom),
+                opacity(1),
+                area(),
+                // tag
+                "unit",
+                `index_${index}`
+              ])
+            }
           }
-        }
+        }else break
       }              
     }     
     // console.log('dispath', player)
@@ -311,7 +331,10 @@ function App() {
       action: null,
       callback: () => {
         console.log(unit.name, 'callback loop')
-        if(atbRef.current) atbRef.current.loopConstructor(index, unit, positionRef.current)
+        const unitData = store.getState().game.units[index]
+        if(unitData.attribute.hp > 0){
+          if(atbRef.current) atbRef.current.loopConstructor(index, unit, positionRef.current)
+        }
       }
     }
 
@@ -362,7 +385,7 @@ function App() {
     actionFunction().then(() => {
       if(actionCallBack) actionCallBack()
       // Resume timers of the other units
-      setTimerToAct({ index, value: false })      
+      setTimerToAct({ index, value: false }) 
     })
   }
 
@@ -374,6 +397,30 @@ function App() {
    * @param {number} tindex - The index of the enemy unit in the unitSprites array
    */
   const attack = async (unit, target, uIndex, tindex) => {
+    // Get latest state
+    const units = store.getState().game.units
+
+    // Check if the target is in the field
+    if(units[tindex].attribute.hp === 0){
+      // Change target if any
+      let nextTarget = null
+      for(let i=5; i < 10; i++){
+        if(units[i] && units[i].attribute.hp > 0){
+          nextTarget = units[i]
+          break
+        }else break
+      }
+
+      if(nextTarget) target = nextTarget
+      else
+      // Check if the enemy sprite is dispalyed
+      // if(spriteRef.current[tindex].opacity === 1){
+      //   // End the battle
+      //   unitLoseHandle(tindex)
+        return
+      // }
+    }
+
     let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
     dmg += Math.round(dmg * (tension.current / 100)) // Add tension bonus
 
@@ -412,52 +459,58 @@ function App() {
     ).onEnd(() => {
       dmgText.destroy()
 
-      dispatch(
-        updateUnit({ name: target.name, attribute, action: target.action })
-      )
-
       if(attribute.hp === 0) {
-        // TODO - Unit lose animation
-        tween(
-          spriteRef.current[tindex].opacity, 
-          0, 
-          0.5,
-          (o) => spriteRef.current[tindex].opacity = o, 
-          easings.linear
-        ).onEnd(() => {
-          // Remove sprite
-          spriteRef.current[tindex].destroy()
-        })
-
-        dispatch(
-          setTension({ current: 5 })
-        )
-
-        // TODO - Remove the atb bar of the unit
-        if(atbRef.current) atbRef.current.removeBar(tindex)
-        
-        // TODO - If no more enemy in the scene
-        const units = store.getState().game.units
-        let remain = 0
-        // TODO - Need to set the starting number as the length of players
-        for(let i=5; i < units.length; i++){
-          if(units[i].attribute.hp > 0) remain += 1
-        }
-
-        if(!remain){
-          if(wave.current !== wave.max){
-            console.log('next wave?')
-            setWave(1)
-          }else{
-            // TODO - End of the battle
-          }
-        }
+        unitLoseHandle(tindex)
       }else{
         dispatch(
           setTension({ current: 1 })
         )
       }
     })
+  }
+
+  const unitLoseHandle = (tindex) => {
+    // TODO - Unit lose animation
+    tween(
+      spriteRef.current[tindex].opacity, 
+      0, 
+      0.5,
+      (o) => spriteRef.current[tindex].opacity = o, 
+      easings.linear
+    ).onEnd(() => {
+      // Remove sprite
+      spriteRef.current[tindex].destroy()
+    })
+
+    dispatch(
+      setTension({ current: 5 })
+    )
+
+    // Remove the atb bar of the unit
+    if(atbRef.current) atbRef.current.removeBar(tindex)
+    
+    // TODO - If no more enemy in the scene
+    let remain = 0
+    // TODO - Need to set the starting number as the length of players
+    for(let i=5; i < units.length; i++){
+      // In case if the state is not update yet
+      if(units[i].attribute.hp > 0 && i !== tindex) remain += 1
+    }
+
+    if(!remain){
+      // STOP timers
+      Array.from(5).forEach(i => atbRef.current.removeBar(i))
+      // Empty activeUnit stack
+      setActiveUnit([])          
+      if(wave.current !== wave.max){
+        console.log('next wave?')
+        dispatch(setWave(1))
+      }else{
+        // TODO - End of the battle
+      }
+    }
+
+    console.log('remaing', remain)
   }
   // #endregion
 
@@ -599,7 +652,7 @@ function App() {
           const unit = store.getState().game.units[next]
           // Update unit state only when the action value is empty
           if(!unit.action.length) dispatch(setCurrentActivePlayer(next))
-          // else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
+          else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
         } 
       })      
     }
@@ -625,17 +678,24 @@ function App() {
   // #region wave transition
   useEffect(() => {
     if(wave.current > 1 && wave.current < wave.max){
-      // let time = 0
-      const transiiton = add[
-        rect(gameWidth, Math.round(gameHeight * 0.05)),
-        pos(0),
-        color(BLACK),
-        shader('waveTransition', () => ({ 'u_time': 100 })),
-        'shader'
-      ]
-        // transiiton.current.uniform('u_time', )
-      // drawCharacters()
-      wait(0.1, () => transiiton.destroy)
+      let time = 0
+      const transiiton = onDraw(() => {
+        time += dt()
+
+        if(time >= 3){
+          transiiton.cancel()
+          // transiiton.destroy()
+        }else{
+          drawUVQuad({
+            width: gameWidth * 2,
+            height: gameHeight,
+            shader: 'waveTransition',
+            uniform: {
+              "u_time": time,
+            }
+          })          
+        }
+      })
     }
   }, [wave])
   // #endregion
