@@ -30,6 +30,9 @@ const gameSlice = createSlice({
                 }
             })
         },
+        setWave: (state, action) => {
+            state.wave.current += action.payload
+        },
         setTension: (state, action) => {
             if(action.payload.current)
                 state.tension.current = (state.tension.current + action.payload.current) > state.tension.max ? state.tension.max : state.tension.current + action.payload.current
@@ -43,5 +46,5 @@ const gameSlice = createSlice({
     }
 })
 
-export const { setUnits, updateUnit, setTension, setCurrentActivePlayer } = gameSlice.actions
+export const { setUnits, updateUnit, setWave, setTension, setCurrentActivePlayer } = gameSlice.actions
 export default gameSlice.reducer

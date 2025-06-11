@@ -7,6 +7,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setUnits,
   updateUnit,
+  setWave,
   setTension,
   setCurrentActivePlayer,
 } from './store/game';
@@ -36,9 +37,11 @@ const {
   text,
   onClick,
   onHover,
+  onUpdate,
   shader,
   outline,
   wait, 
+  time,
   loop,
   opacity,
   rotate,
@@ -46,6 +49,8 @@ const {
   tween,
   easings,
   vec2,
+  color,
+  BLACK,
   WHITE,
   RED,
   width,
@@ -64,29 +69,45 @@ const initScene = () => {
 
     // Shader
     // Reference from: https://github.com/kaplayjs/kaplay/issues/394
-    loadShader('outline', null,
-      `uniform vec3 u_color;
+    // loadShader('outline', null,
+    //   `uniform vec3 u_color;
+
+    //   vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
+    //       vec4 outlineColor = vec4(vec3(u_color) / 255.0, 1.0);
+    //       vec2 textureSize = vec2(2048, 2048);
+    //       vec4 pixel = texture2D(tex, uv);
+    //       const float EPSILON = 0.0001;
+    //       if(pixel.a < EPSILON)
+    //       {
+    //           vec2 offset = vec2(1.0 / textureSize.x, 0.0);
+    //           float left = texture2D(tex, uv - offset).a;
+    //           float right = texture2D(tex, uv + offset).a;
+          
+    //           offset.x = 0.0;
+    //           offset.y = 1.0 / textureSize.y;
+    //           float up = texture2D(tex, uv - offset).a;
+    //           float down = texture2D(tex, uv + offset).a;
+          
+    //           float a = step(EPSILON, left + right + up + down);
+    //           pixel = mix(pixel, outlineColor, a);
+    //       }
+    //       return pixel;
+    //   }`
+    // )
+
+    loadShader('waveTransition', null,
+      `uniform float u_time;
 
       vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
-          vec4 outlineColor = vec4(vec3(u_color) / 255.0, 1.0);
-          vec2 textureSize = vec2(2048, 2048);
-          vec4 pixel = texture2D(tex, uv);
-          const float EPSILON = 0.0001;
-          if(pixel.a < EPSILON)
-          {
-              vec2 offset = vec2(1.0 / textureSize.x, 0.0);
-              float left = texture2D(tex, uv - offset).a;
-              float right = texture2D(tex, uv + offset).a;
-          
-              offset.x = 0.0;
-              offset.y = 1.0 / textureSize.y;
-              float up = texture2D(tex, uv - offset).a;
-              float down = texture2D(tex, uv + offset).a;
-          
-              float a = step(EPSILON, left + right + up + down);
-              pixel = mix(pixel, outlineColor, a);
+          // Define a jagged edge using a sine wave
+          float wave = sin(uv.y * 40.0 + u_time * 10.0) * 0.05;
+          float cutoff = 1.0 - u_time * 1.5;
+
+          if (uv.x < cutoff + wave) {
+              return vec4(0.0, 0.0, 0.0, 1.0); // Black cover
           }
-          return pixel;
+
+          return texture2D(tex, uv) * color;
       }`
     )
   })
@@ -110,6 +131,7 @@ function App() {
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
   const units = useSelector(state => state.game.units)
+  const wave = useSelector(state => state.game.wave)
   const tension = useSelector(state => state.game.tension)
   const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
 
@@ -200,49 +222,81 @@ function App() {
       if(!positionRef.current) positionRef.current = position
       else return
 
-      const zoom = 1.5
-      let player = []
-      try {
-        for(let i=0; i < position.length; i++){
-          const currentSets = position[i]
-          for(let j=0; j < currentSets.length; j++){
-            const set = currentSets[j]
-            console.log(set.pos)
-            const { x, y } = set.pos
-            const data = (i > 0)? unit.enemy[j] : unit.player[j]
-            // 128px is the height of the sprite
-            // 20px is the height of the rect
-            player.push({...data})
-            spriteRef.current.push(
-              add([
-                sprite('player', { flipX: (i > 0)? false : true }), 
-                pos(x - (128 / 2), y - (128 + 20)), 
-                scale(zoom),
-                opacity(1),
-                area(),
-                // tag
-                "unit",
-                `index_${(i > 0)? j + 5 : j}`
-              ])
-            )
-          }              
-        }     
-        // console.log('dispath', player)
-        dispatch(
-          setUnits(player)            
-        )
-
-        // Set ATB bars 
-        player.forEach((p, index) => {
-          if(atbRef.current){
-            atbRef.current.loopConstructor(index, p, position)
-          }
-        })
-      } catch (error) {
-        console.log('Error:', error)
-      }
+      drawCharacters()
     }
   }, [position])
+
+  const drawCharacters = () => {
+    const zoom = 1.5
+    let player = []
+
+    for(let i=0; i < position.length; i++){
+      const currentSets = position[i]
+      for(let j=0; j < currentSets.length; j++){
+        const set = currentSets[j]
+        console.log(set.pos)
+        const { x, y } = set.pos
+        let data = {}
+        const index = (i > 0)? j + 5 : j
+
+        if(wave.current > 1){
+          const units = store.getState().game.units
+          data = units[index]
+          if(i > 0 && data.attribute.hp === 0){
+            // Refill the hp and mp
+            data.attribute.hp = data.attribute.maxHp
+            data.attribute.mp = data.attribute.maxMp
+          }
+        }else{
+          data = (i > 0)? unit.enemy[j] : unit.player[j]
+        }
+
+        // 128px is the height of the sprite
+        // 20px is the height of the rect
+        player.push({...data})
+        if(wave.current === 1){
+          spriteRef.current.push(
+            add([
+              sprite('player', { flipX: (i > 0)? false : true }), 
+              pos(x - (128 / 2), y - (128 + 20)), 
+              scale(zoom),
+              opacity(1),
+              area(),
+              // tag
+              "unit",
+              `index_${index}`
+            ])
+          )          
+        }else{
+          // Recreate enemy sprite if destoryed
+          if(!spriteRef.current[index] && i > 0){
+            spriteRef.current[index] = add([
+              sprite('player', { flipX: (i > 0)? false : true }), 
+              pos(x - (128 / 2), y - (128 + 20)), 
+              scale(zoom),
+              opacity(1),
+              area(),
+              // tag
+              "unit",
+              `index_${index}`
+            ])
+          }
+        }
+      }              
+    }     
+    // console.log('dispath', player)
+    dispatch(
+      setUnits(player)            
+    )
+
+    // Set ATB bars 
+    player.forEach((p, index) => {
+      if(atbRef.current){
+        atbRef.current.loopConstructor(index, p, position)
+      }
+    })
+  }
+
   // #eng regin
 
   // #region Enemy AI
@@ -289,9 +343,6 @@ function App() {
         break
       case 'escape':
         input.action = function(){ controller(async() => { console.log('Enemy escape')}, index ) } 
-        break
-      default:
-        input.action = function(){ controller(async() => { console.log('Enemy attack')}, index ) } 
         break
     }
 
@@ -381,8 +432,26 @@ function App() {
         dispatch(
           setTension({ current: 5 })
         )
+
+        // TODO - Remove the atb bar of the unit
+        if(atbRef.current) atbRef.current.removeBar(tindex)
         
         // TODO - If no more enemy in the scene
+        const units = store.getState().game.units
+        let remain = 0
+        // TODO - Need to set the starting number as the length of players
+        for(let i=5; i < units.length; i++){
+          if(units[i].attribute.hp > 0) remain += 1
+        }
+
+        if(!remain){
+          if(wave.current !== wave.max){
+            console.log('next wave?')
+            setWave(1)
+          }else{
+            // TODO - End of the battle
+          }
+        }
       }else{
         dispatch(
           setTension({ current: 1 })
@@ -433,10 +502,10 @@ function App() {
         // TODO - Switch to defense sprite / animation
         break
       case 'change':
-        
+        // TODO - Font line to back, back to front line
         break
       case 'escape':
-
+        // TODO - Get the possiblity to success
         break
     } 
   }
@@ -542,7 +611,8 @@ function App() {
     if(activeUnits.find(a => a === index) !== undefined) return
     setActiveUnit((prevState) => [...prevState, index])
     if(index > 4){
-      if(unit.attribute.hp > 0){
+      const unitData = store.getState().game.units[index]
+      if(unitData.attribute.hp > 0){
         // Set enemy action after 1 to 3 seconds most
         wait(Math.round(Math.random() * 2) + 1, () => {
           enemyAI(unit, index)
@@ -550,6 +620,24 @@ function App() {
       }
     }
   }
+  // #endregion
+
+  // #region wave transition
+  useEffect(() => {
+    if(wave.current > 1 && wave.current < wave.max){
+      // let time = 0
+      const transiiton = add[
+        rect(gameWidth, Math.round(gameHeight * 0.05)),
+        pos(0),
+        color(BLACK),
+        shader('waveTransition', () => ({ 'u_time': 100 })),
+        'shader'
+      ]
+        // transiiton.current.uniform('u_time', )
+      // drawCharacters()
+      wait(0.1, () => transiiton.destroy)
+    }
+  }, [wave])
   // #endregion
 
   return (
