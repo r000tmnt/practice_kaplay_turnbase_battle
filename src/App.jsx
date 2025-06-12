@@ -54,6 +54,7 @@ const {
   BLACK,
   WHITE,
   RED,
+  YELLOW,
   drawUVQuad,
   width,
   dt,
@@ -259,7 +260,8 @@ function App() {
 
         if(wave.current > 1){
           const units = store.getState().game.units
-          data = units[index]
+          if(!units[index]) return
+          data = JSON.parse(JSON.stringify(units[index]))
           if(i > 0){
             // Refill the hp and mp
             data.attribute.hp = data.attribute.maxHp
@@ -438,9 +440,11 @@ function App() {
     
     // Create text
     const dmgText = add([
-      text(dmg),
-      pos(spriteRef.current[tindex].pos.x + (128 / 2), spriteRef.current[tindex].pos.y - 50),
-      opacity(1)
+      text(dmg, { size: (rng <= crit)? 48 : 36 }),
+      pos(spriteRef.current[tindex].pos.x + (128 / 2), spriteRef.current[tindex].pos.y - 10),
+      opacity(1),
+      color((rng <= crit)? YELLOW : WHITE),
+      outline(1, BLACK)
     ])
 
     // Animate the damage text
@@ -493,7 +497,7 @@ function App() {
 
     if(!remain){
       // STOP timers
-      Array.from(5).forEach(i => atbRef.current.removeBar(i))
+      Array.from([0, 1, 2, 3 ,4]).forEach(i => atbRef.current.removeBar(i))
       // Empty activeUnit stack
       setActiveUnit([])          
       // Reset pointer
@@ -592,17 +596,17 @@ function App() {
 
     switch(unit.action){
       case 'attack':{
-          if(Number(target) > 4){
-            input.action = function(){ 
-              controller(
-                () => attack(unit, units[target], currentActivePlayer, target), 
-                currentActivePlayer
-              ) 
-            }
-            setPointedTarget(-1)
-            spriteHoverEvent.paused = true
-            spriteClickEvent.paused = true            
+        if(Number(target) > 4){
+          input.action = function(){ 
+            controller(
+              () => attack(unit, units[target], currentActivePlayer, target), 
+              currentActivePlayer
+            ) 
           }
+          setPointedTarget(-1)
+          spriteHoverEvent.paused = true
+          spriteClickEvent.paused = true            
+        }
       }
       break;
     }
@@ -694,9 +698,9 @@ function App() {
         }
       })
 
-      // wait(0.5, () => {
-      //   drawCharacters()
-      // })
+      wait(1, () => {
+        drawCharacters()
+      })
     }
   }, [wave])
   // #endregion
