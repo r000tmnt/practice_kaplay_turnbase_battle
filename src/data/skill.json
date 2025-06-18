@@ -218,7 +218,7 @@
         }
     },
     {
-        "id": 12,
+        "id": 13,
         "name": "Hot blood",
         "type": "Support",
         "cost": {
@@ -237,7 +237,7 @@
         }
     },
     {
-        "id": 13,
+        "id": 14,
         "name": "Accel",
         "type": "Support",
         "cost": {
@@ -256,7 +256,7 @@
         }
     },
     {
-        "id": 14,
+        "id": 15,
         "name": "Friendship",
         "type": "Support",
         "cost": {
@@ -273,7 +273,7 @@
         }
     },
     {
-        "id": 15,
+        "id": 16,
         "name": "Well power",
         "type": "Support",
         "cost": {
@@ -290,7 +290,7 @@
         }
     },
     {
-        "id": 16,
+        "id": 17,
         "name": "Iron wall",
         "type": "Support",
         "cost": {
@@ -307,7 +307,7 @@
         }
     },
     {
-        "id": 17,
+        "id": 18,
         "name": "Soul",
         "type": "Support",
         "cost": {
