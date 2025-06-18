@@ -1,0 +1,329 @@
+[
+    {
+        "id": 1,
+        "name": "Quarter circle forward punch",
+        "type": "Motion",
+        "cost": {
+            "mp": 1
+        },
+        "desc": "The most common form of motion input",
+        "attribute": {
+            "dmg": {
+                "min": 1,
+                "max": 10
+            },
+            "buff": {},
+            "debuff": {}
+        }
+    },
+    {
+        "id": 2,
+        "name": "DP forward punch",
+        "type": "Motion",
+        "cost": {
+            "mp": 3
+        },
+        "desc": "The iconic form of anti-air",
+        "attribute": {
+            "dmg": {
+                "min": 3,
+                "max": 20
+            },
+            "buff": {},
+            "debuff": {}
+        }
+    },
+    {
+        "id": 3,
+        "name": "Back forward punch",
+        "type": "Motion",
+        "cost": {
+            "mp": 3
+        },
+        "desc": "Also known as NRS input",
+        "attribute": {
+            "dmg": {
+                "min": 1,
+                "max": 10
+            },
+            "buff": {},
+            "debuff": {}
+        }
+    },
+    {
+        "id": 4,
+        "name": "LMHSMMHS",
+        "type": "Motion",
+        "cost": {
+            "mp": 5
+        },
+        "desc": "A universal combo of MVC3",
+        "attribute": {
+            "dmg": {
+                "min": 5,
+                "max": 30
+            },
+            "buff": {},
+            "debuff": {}
+        }
+    },
+    {
+        "id": 5,
+        "name": "Down up",
+        "type": "Motion",
+        "cost": {
+            "mp": 5
+        },
+        "desc": "Also known as hight jump",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "spd": 3
+            },
+            "debuff": {
+                "turn": 1,
+                "luck": 2
+            }
+        }
+    },
+    {
+        "id": 6,
+        "name": "Advencing guard",
+        "type": "Motion",
+        "cost": {
+            "mp": 5
+        },
+        "desc": "Also known as push block",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "def": 3
+            },
+            "debuff": {
+                "turn": 1,
+                "spd": 1
+            }
+        }
+    },
+    {
+        "id": 7,
+        "name": "Double quarter circle forward punch",
+        "type": "Motion",
+        "cost": {
+            "mp": 10
+        },
+        "desc": "A common form of super move",
+        "attribute": {
+            "dmg": {
+                "min": 10,
+                "max": 50
+            },
+            "buff": null,
+            "debuff": null
+        }
+    },
+    {
+        "id": 8,
+        "name": "X-FACTOR",
+        "type": "SPECIAL",
+        "cost": {
+            "mp": "ALL"
+        },
+        "desc": "A common form of super move",
+        "attribute": {
+            "dmg": {
+                "min": 10,
+                "max": 50
+            },
+            "buff": {
+                "turn": 3,
+                "inFight": 0.3,
+                "gunFight": 0.3,
+                "def": 0.3,
+                "will": 0.3,
+                "spd": 0.3,
+                "luck": 0.3,
+                "act": 0.3,
+                "cast": 0.3
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 9,
+        "name": "Focus",
+        "type": "Support",
+        "cost": {
+            "mp": 10
+        },
+        "desc": "Temperary boost",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 1,
+                "spd": 0.1
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 10,
+        "name": "Faith",
+        "type": "Support",
+        "cost": {
+            "mp": 30
+        },
+        "desc": "Heal an unit with 30% of hp",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 0,
+                "hp": 0.3
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 11,
+        "name": "Well to fight",
+        "type": "Support",
+        "cost": {
+            "mp": 40
+        },
+        "desc": "The next attack is garentee to crit",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 0,
+                "luck": 1.0
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 12,
+        "name": "High tension",
+        "type": "Support",
+        "cost": {
+            "mp": 40
+        },
+        "desc": "Increse the tension points by 10",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 0,
+                "tension": 10
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 12,
+        "name": "Hot blood",
+        "type": "Support",
+        "cost": {
+            "mp": 40
+        },
+        "desc": "The next attack will deal twice the damage",
+        "attribute": {
+            "dmg": {
+                "min": 2.0,
+                "max": 2.0
+            },
+            "buff": {
+                "turn": 0
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 13,
+        "name": "Accel",
+        "type": "Support",
+        "cost": {
+            "mp": 20
+        },
+        "desc": "Boost up speed for one turn",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 1,
+                "spd": 0.1,
+                "act": 0.1,
+                "cast": 0.1
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 14,
+        "name": "Friendship",
+        "type": "Support",
+        "cost": {
+            "mp": 50
+        },
+        "desc": "Heal all party member with 40% of hp",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 0,
+                "hp": 0.4
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 15,
+        "name": "Well power",
+        "type": "Support",
+        "cost": {
+            "mp": 20
+        },
+        "desc": "Heal the caster's hp up to 15%",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 0,
+                "hp": 0.15
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 16,
+        "name": "Iron wall",
+        "type": "Support",
+        "cost": {
+            "mp": 40
+        },
+        "desc": "Decrease the damage taken for one turn",
+        "attribute": {
+            "dmg": null,
+            "buff": {
+                "turn": 1,
+                "def": 0.4
+            },
+            "debuff": null
+        }
+    },
+    {
+        "id": 17,
+        "name": "Soul",
+        "type": "Support",
+        "cost": {
+            "mp": 60,
+            "tension": "ALL"
+        },
+        "desc": "The next attack deals third times of damage",
+        "attribute": {
+            "dmg": {
+                "min": 3.0,
+                "max": 3.0
+            },
+            "buff": {
+                "turn": 0
+            },
+            "debuff": null
+        }
+    }          
+]
