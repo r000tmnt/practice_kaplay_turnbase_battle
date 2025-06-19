@@ -23,12 +23,19 @@ const gameSlice = createSlice({
         updateUnit: (state, action) => {
             const { name, attribute, } = action.payload
             // Find the unit by name
-            state.units.map((unit) => {
-                if(unit.name === name){
-                    unit.attribute = { ...attribute }
-                    unit.action = action.payload.action
-                }
-            })
+            console.log('update unit', name)
+            console.log('hp', attribute.hp)
+
+            // If the unit's hp has beem updated
+            const unit = state.units.find(unit => unit.name === name)
+            if(unit && unit.attribute.hp !== 0){
+                state.units.map((unit) => {
+                    if(unit.name === name){
+                        unit.attribute = { ...attribute }
+                        unit.action = action.payload.action
+                    }
+                })
+            }else console.log('unit destroyed', name)
         },
         setWave: (state, action) => {
             state.wave.current += action.payload
