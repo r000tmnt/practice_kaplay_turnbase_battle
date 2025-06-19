@@ -81,7 +81,8 @@ body {
   /* width: 100%; */
 }
 
-.back{
+.back, .skill-list{
+  background-color: black;
   top: unset;
   bottom: 0;
   transform-origin: bottom;
@@ -126,11 +127,21 @@ body {
   background-color: turquoise;
 }
 
-.action{
+.action,.skill-list{
   display: grid;
   grid-template-columns: 33% 33% 33%;
   text-align: center;
   padding: 1%;
+}
+
+.skill-item{
+  margin: 1%;
+  cursor: pointer;
+}
+
+.not-enough{
+  color: red;
+  pointer-events: none;
 }
 
 /* .action > div {

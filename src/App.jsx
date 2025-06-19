@@ -145,7 +145,7 @@ function App() {
   const [activeUnits, setActiveUnit] = useState([])
   const next = useMemo(() => activeUnits.length? activeUnits.find(a => a < 5) : -1, [activeUnits])
   const [pointedTarget, setPointedTarget] = useState(-1)
-  // const target = useMemo(() => pointedTarget, [pointedTarget])
+  const skillRef = useRef([])
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
@@ -391,6 +391,29 @@ function App() {
     })
   }
 
+  const getAvailableTargets = (target ,tindex, start, end) => {
+    // Get latest state
+    const units = store.getState().game.units
+
+    // Check if the target is in the field
+    if(units[tindex].attribute.hp === 0){
+      // Change target if any
+      let nextTarget = null
+      for(let i=start; i < end; i++){
+        if(units[i] && units[i].attribute.hp > 0){
+          nextTarget = units[i]
+          break
+        }
+      }
+
+      if(nextTarget) target = nextTarget
+
+      return nextTarget
+    }else{
+      return target
+    }
+  }
+
   /**
    * Attack function
    * @param {Object} unit - Who performs the attack
@@ -399,23 +422,9 @@ function App() {
    * @param {number} tindex - The index of the enemy unit in the unitSprites array
    */
   const attack = async (unit, target, uIndex, tindex) => {
-    // Get latest state
-    const units = store.getState().game.units
+    target = getAvailableTargets(target, tindex, 5, 10)
 
-    // Check if the target is in the field
-    if(units[tindex].attribute.hp === 0){
-      // Change target if any
-      let nextTarget = null
-      for(let i=5; i < 10; i++){
-        if(units[i] && units[i].attribute.hp > 0){
-          nextTarget = units[i]
-          break
-        }else break
-      }
-
-      if(nextTarget) target = nextTarget
-      else return
-    }
+    if(!target) return
 
     let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
     dmg += Math.round(dmg * (tension.current / 100)) // Add tension bonus
@@ -437,32 +446,98 @@ function App() {
     dispatch(
       updateUnit({ name: target.name, attribute: attribute, action: target.action })
     )
-    
+
+    showText(unit, dmg, rng, crit, tindex, attribute)
+  }
+
+    /**
+   * Skill function
+   * @param {Object} unit - Who performs the attack
+   * @param {Object} target - Who takes damage 
+   * @param {number} uindex - The index of the player unit in the unitSprites array
+   * @param {number} tindex - The index of the enemy unit in the unitSprites array
+   * @param {Object} skill - The skill object
+   */
+  const castSkill = async (unit, target, uIndex, tindex, skill) => {
+    if(skill.type !== 'Support'){
+        target = getAvailableTargets(target, tindex, 5, 10)
+        if(!target) return
+
+        if(skill.type === 'InFight'){
+          let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
+          dmg += Math.round(dmg * (tension.current / 100)) // Add tension bonus
+      
+          const crit = unit.attribute.luck / 100
+      
+          const rng = Math.random()
+      
+          if(rng <= crit){
+            dmg = Math.round(dmg * 1.5)
+          }
+      
+          // If the target take defense
+          if(target.action === 'defense') dmg = Math.round(dmg / 2)    
+      
+          const attribute = JSON.parse(JSON.stringify(target.attribute))
+          attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
+          
+          dispatch(
+            updateUnit({ name: target.name, attribute: attribute, action: target.action })
+          )
+      
+          showText(unit, dmg, rng, crit, tindex, attribute)          
+        }
+
+        if(skill.type === 'GunFight'){}
+
+        if(skill.type === 'Super'){}
+    }else{
+        target = getAvailableTargets(target, tindex, 0, 5)
+        if(!target) return
+    }
+  }
+
+  const showText = (unit, number, rng, crit, tindex, attribute) => {
     // Create text
-    const dmgText = add([
-      text(dmg, { size: (rng <= crit)? 48 : 36 }),
+    const resultText = add([
+      text(number, { size: (rng <= crit)? 48 : 36 }),
       pos(spriteRef.current[tindex].pos.x + (128 / 2), spriteRef.current[tindex].pos.y - 10),
       opacity(1),
       color((rng <= crit)? YELLOW : WHITE),
       outline(1, BLACK)
     ])
 
-    // Animate the damage text
+    // Animate the text
     tween(
-      dmgText.pos, 
-      vec2(dmgText.pos.x, dmgText.pos.y - 50), 
+      resultText.pos, 
+      vec2(resultText.pos.x, resultText.pos.y - 50), 
       0.5,
-      (pos) => dmgText.pos = pos,
+      (pos) => resultText.pos = pos,
       easings.easeInOutQuad
     ).onEnd(() => {
-      dmgText.destroy()
+      resultText.destroy()
 
-      if(attribute.hp === 0) {
-        unitLoseHandle(tindex)
-      }else{
-        dispatch(
-          setTension({ current: 1 })
-        )
+      if(unit.ation === 'attack') {
+        if(attribute.hp === 0) {
+          unitLoseHandle(tindex)
+        }else{
+          dispatch(
+            setTension({ current: 1 })
+          )
+        }        
+      }
+
+      if(unit.action === 'skill') {
+        const skill = skillRef.current.find(s => s.unit.name === unit.name)
+        if(skill.type !== 'Support'){
+          if(attribute.hp === 0) {
+            unitLoseHandle(tindex)
+          }else{
+            dispatch(
+              setTension({ current: 1 })
+            )
+          }    
+        }
       }
     })
   }
@@ -522,7 +597,7 @@ function App() {
    * Change the ui state and enable sprite hover and click events
   */
 
-  const playerAction = (action, unit) => {
+  const playerAction = (action, unit, skill=null) => {
     if(unit === undefined) return
 
     dispatch(
@@ -534,22 +609,42 @@ function App() {
         spriteHoverEvent.paused = false
         spriteClickEvent.paused = false
         // Find available target
-          let target = -1
           for(let i=5; i < 10; i++){
             if(units[i] && units[i].attribute.hp > 0){
-              target = i
+              setPointedTarget(i - 5)
               break
             }
           }
-
-          if(target > 0) setPointedTarget(target - 5)
         }
         break
       case 'skill': {
-        spriteHoverEvent.paused = false
-        spriteClickEvent.paused = false
+        if(skill){
+          skillRef.current.push({
+            unit,
+            skill
+          })
+          spriteHoverEvent.paused = false
+          spriteClickEvent.paused = false     
+          
+          if(skill.type !== 'Support'){ 
+            // Find available target
+            for(let i=5; i < 10; i++){
+              if(units[i] && units[i].attribute.hp > 0){
+                setPointedTarget(i - 5)
+                break
+              }
+            }      
+          }else{
+            // Find available target
+            for(let i=0; i <= 4; i++){
+              if(units[i] && units[i].attribute.hp > 0){
+                setPointedTarget(i)
+                break
+              }
+            }               
+          }
+        }
       }
-        // TODO - Display avialable skills
         break
       case 'item':
         // TODO - Display avialable items
@@ -602,14 +697,27 @@ function App() {
               () => attack(unit, units[target], currentActivePlayer, target), 
               currentActivePlayer
             ) 
+          }        
+        }
+      }
+      break;
+      case 'skill': {
+        const skill = skillRef.current.find(s => s.unit.name === unit.name)
+        if(skill){
+          input.action = function(){ 
+            controller(
+              () => castSkill(unit, units[target], currentActivePlayer, target, skill),
+              currentActivePlayer
+            ) 
           }
-          setPointedTarget(-1)
-          spriteHoverEvent.paused = true
-          spriteClickEvent.paused = true            
         }
       }
       break;
     }
+
+    setPointedTarget(-1)
+    spriteHoverEvent.paused = true
+    spriteClickEvent.paused = true        
 
     setActiveUnit((prevState) => prevState.filter((a) => a !== currentActivePlayer))
     if(atbRef.current){
