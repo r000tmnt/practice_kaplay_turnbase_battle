@@ -2,7 +2,7 @@
     {
         "id": 1,
         "name": "Quarter circle forward punch",
-        "type": "Motion",
+        "type": "GunFight",
         "cost": {
             "mp": 1
         },
@@ -19,7 +19,7 @@
     {
         "id": 2,
         "name": "DP forward punch",
-        "type": "Motion",
+        "type": "InFight",
         "cost": {
             "mp": 3
         },
@@ -36,7 +36,7 @@
     {
         "id": 3,
         "name": "Back forward punch",
-        "type": "Motion",
+        "type": "GunFight",
         "cost": {
             "mp": 3
         },
@@ -53,7 +53,7 @@
     {
         "id": 4,
         "name": "LMHSMMHS",
-        "type": "Motion",
+        "type": "InFight",
         "cost": {
             "mp": 5
         },
@@ -70,7 +70,7 @@
     {
         "id": 5,
         "name": "Down up",
-        "type": "Motion",
+        "type": "Support",
         "cost": {
             "mp": 5
         },
@@ -89,7 +89,7 @@
     {
         "id": 6,
         "name": "Advencing guard",
-        "type": "Motion",
+        "type": "Support",
         "cost": {
             "mp": 5
         },
@@ -108,7 +108,7 @@
     {
         "id": 7,
         "name": "Double quarter circle forward punch",
-        "type": "Motion",
+        "type": "Super",
         "cost": {
             "mp": 10
         },
@@ -127,7 +127,7 @@
         "name": "X-FACTOR",
         "type": "SPECIAL",
         "cost": {
-            "mp": "ALL"
+            "mp": 0
         },
         "desc": "A common form of super move",
         "attribute": {
@@ -312,7 +312,7 @@
         "type": "Support",
         "cost": {
             "mp": 60,
-            "tension": "ALL"
+            "tension": 0
         },
         "desc": "The next attack deals third times of damage",
         "attribute": {

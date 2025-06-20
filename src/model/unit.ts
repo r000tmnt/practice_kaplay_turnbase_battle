@@ -1,23 +1,22 @@
-import { SpriteData, PosComp } from "kaplay"
-
+import { PosComp } from "kaplay"
 interface Unit {
-    name: String,
-    sprite: SpriteData,
+    name: string,
     attribute: {
-        hp: Number,
-        mp: Number,
-        maxHp: Number,
-        maxMp: Number,
-        inFight: Number,
-        gunFight: Number,
-        will: Number,
-        spd: Number,
-        luck: Number,
-        act: Number,
-        cast: Number,
-        status: String
+        hp: number,
+        mp: number,
+        maxHp: number,
+        maxMp: number,
+        inFight: number,
+        gunFight: number,
+        will: number,
+        spd: number,
+        def: number,
+        luck: number,
+        act: number,
+        cast: number,
+        status: string
     },
-    action: String
+    action: string,
 }
 
 interface Position {

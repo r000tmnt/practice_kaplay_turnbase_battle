@@ -23,6 +23,8 @@ import ATB from './component/ATB';
 import UnitArrow from './component/UnitArrow';
 import Command from './component/Command';
 
+import { attack, castSkill } from './utils/battle';
+
 const { 
   scene, 
   loadSprite, 
@@ -37,26 +39,26 @@ const {
   text,
   onClick,
   onHover,
-  onUpdate,
-  onDraw,
-  shader,
-  outline,
-  wait, 
-  time,
-  loop,
-  opacity,
-  rotate,
-  animate,
-  tween,
-  easings,
   vec2,
   color,
+  // onUpdate,
+  onDraw,
+  // shader,
+  outline,
+  wait, 
+  // time,
+  // loop,
+  opacity,
+  // rotate,
+  // animate,
+  tween,
+  easings,
   BLACK,
   WHITE,
   RED,
   YELLOW,
   drawUVQuad,
-  width,
+  // width,
   dt,
 } = k
 
@@ -151,7 +153,7 @@ function App() {
   const gameHeight = useSelector(state => state.setting.height)
   const units = useSelector(state => state.game.units)
   const wave = useSelector(state => state.game.wave)
-  const tension = useSelector(state => state.game.tension)
+  // const tension = useSelector(state => state.game.tension)
   const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
 
   const dispatch = useDispatch()
@@ -274,12 +276,13 @@ function App() {
         if(data){
           // 128px is the height of the sprite
           // 20px is the height of the rect
+          const uPos = pos(x - (128 / 2), y - (128 + 20))
           player.push({...data})
           if(wave.current === 1){
             spriteRef.current.push(
               add([
                 sprite('player', { flipX: (i > 0)? false : true }), 
-                pos(x - (128 / 2), y - (128 + 20)), 
+                uPos, 
                 scale(zoom),
                 opacity(1),
                 area(),
@@ -293,7 +296,7 @@ function App() {
             if(!spriteRef.current[index] && i > 0){
               spriteRef.current[index] = add([
                 sprite('player', { flipX: (i > 0)? false : true }), 
-                pos(x - (128 / 2), y - (128 + 20)), 
+                uPos, 
                 scale(zoom),
                 opacity(1),
                 area(),
@@ -384,126 +387,24 @@ function App() {
     // Pause timers of the other units
     setTimerToAct({ index, value: true })
     
-    actionFunction().then(() => {
+    actionFunction().then((result) => {
+      if(result !== undefined) {
+        showText(result)
+      }
+
       if(actionCallBack) actionCallBack()
       // Resume timers of the other units
       setTimerToAct({ index, value: false }) 
     })
   }
 
-  const getAvailableTargets = (target ,tindex, start, end) => {
-    // Get latest state
-    const units = store.getState().game.units
-
-    // Check if the target is in the field
-    if(units[tindex].attribute.hp === 0){
-      // Change target if any
-      let nextTarget = null
-      for(let i=start; i < end; i++){
-        if(units[i] && units[i].attribute.hp > 0){
-          nextTarget = units[i]
-          break
-        }
-      }
-
-      if(nextTarget) target = nextTarget
-
-      return nextTarget
-    }else{
-      return target
-    }
-  }
-
-  /**
-   * Attack function
-   * @param {Object} unit - Who performs the attack
-   * @param {Object} target - Who takes damage 
-   * @param {number} uindex - The index of the player unit in the unitSprites array
-   * @param {number} tindex - The index of the enemy unit in the unitSprites array
-   */
-  const attack = async (unit, target, uIndex, tindex) => {
-    target = getAvailableTargets(target, tindex, 5, 10)
-
-    if(!target) return
-
-    let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
-    dmg += Math.round(dmg * (tension.current / 100)) // Add tension bonus
-
-    const crit = unit.attribute.luck / 100
-
-    const rng = Math.random()
-
-    if(rng <= crit){
-      dmg = Math.round(dmg * 1.5)
-    }
-
-    // If the target take defense
-    if(target.action === 'defense') dmg = Math.round(dmg / 2)    
-
-    const attribute = JSON.parse(JSON.stringify(target.attribute))
-    attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
-    
-    dispatch(
-      updateUnit({ name: target.name, attribute: attribute, action: target.action })
-    )
-
-    showText(unit, dmg, rng, crit, tindex, attribute)
-  }
-
-    /**
-   * Skill function
-   * @param {Object} unit - Who performs the attack
-   * @param {Object} target - Who takes damage 
-   * @param {number} uindex - The index of the player unit in the unitSprites array
-   * @param {number} tindex - The index of the enemy unit in the unitSprites array
-   * @param {Object} skill - The skill object
-   */
-  const castSkill = async (unit, target, uIndex, tindex, skill) => {
-    if(skill.type !== 'Support'){
-        target = getAvailableTargets(target, tindex, 5, 10)
-        if(!target) return
-
-        if(skill.type === 'InFight'){
-          let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
-          dmg += Math.round(dmg * (tension.current / 100)) // Add tension bonus
-      
-          const crit = unit.attribute.luck / 100
-      
-          const rng = Math.random()
-      
-          if(rng <= crit){
-            dmg = Math.round(dmg * 1.5)
-          }
-      
-          // If the target take defense
-          if(target.action === 'defense') dmg = Math.round(dmg / 2)    
-      
-          const attribute = JSON.parse(JSON.stringify(target.attribute))
-          attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
-          
-          dispatch(
-            updateUnit({ name: target.name, attribute: attribute, action: target.action })
-          )
-      
-          showText(unit, dmg, rng, crit, tindex, attribute)          
-        }
-
-        if(skill.type === 'GunFight'){}
-
-        if(skill.type === 'Super'){}
-    }else{
-        target = getAvailableTargets(target, tindex, 0, 5)
-        if(!target) return
-    }
-  }
-
-  const showText = (unit, number, rng, crit, tindex, attribute) => {
+  const showText = ({unit, number, crit, tindex, attribute}) => {
     // Create text
     const resultText = add([
-      text(number, { size: (rng <= crit)? 48 : 36 }),
+      text(number, { size: crit? 48 : 36 }),
       pos(spriteRef.current[tindex].pos.x + (128 / 2), spriteRef.current[tindex].pos.y - 10),
       opacity(1),
-      color((rng <= crit)? YELLOW : WHITE),
+      color(crit? YELLOW : WHITE),
       outline(1, BLACK)
     ])
 
@@ -517,7 +418,7 @@ function App() {
     ).onEnd(() => {
       resultText.destroy()
 
-      if(unit.ation === 'attack') {
+      if(unit.action === 'attack') {
         if(attribute.hp === 0) {
           unitLoseHandle(tindex)
         }else{
@@ -544,6 +445,8 @@ function App() {
 
   const unitLoseHandle = (tindex) => {
     // TODO - Unit lose animation
+    // Get the latest state
+    const units = store.getState().game.units
     tween(
       spriteRef.current[tindex].opacity, 
       0, 
