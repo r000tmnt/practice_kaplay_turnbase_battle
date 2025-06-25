@@ -87,7 +87,7 @@ export default function Command({currentActivePlayer, notifyParent}) {
         <div className={`skill-list ui ${skillList.length > 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
         { skillList.map((s, index) => {
               return (
-                <div key={index} className={`skill-item ${units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
+                <button key={index} className={`skill-item ${units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
                 onClick={() => {
                   setShowCancel(true)
                   notifyParent('skill', units[currentActivePlayer], s)
@@ -104,7 +104,7 @@ export default function Command({currentActivePlayer, notifyParent}) {
                       )
                     })  
                   }</div>
-                </div>
+                </button>
               )
             }) }
             <button onClick={() => dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))}>BACK</button>

@@ -15,6 +15,8 @@ const gameSlice = createSlice({
         turn: 0,
         units: [] as Unit[],
         currentActivePlayer: -1,
+        currentCastingSkill: '',
+        effectTurnCounter: [] as {unit: Unit, turn: number}[]
     },
     reducers : {
         setUnits: (state, action) => {
@@ -49,9 +51,15 @@ const gameSlice = createSlice({
         },
         setCurrentActivePlayer: (state, action) => {
             state.currentActivePlayer = action.payload
+        },
+        setCurrentCastingSkill: (state, action) => {
+            state.currentCastingSkill = action.payload
+        },
+        updateEffectTurnCounter: (state, action) => {
+            state.effectTurnCounter = action.payload
         }
     }
 })
 
-export const { setUnits, updateUnit, setWave, setTension, setCurrentActivePlayer } = gameSlice.actions
+export const { setUnits, updateUnit, setWave, setTension, setCurrentActivePlayer, setCurrentCastingSkill, updateEffectTurnCounter } = gameSlice.actions
 export default gameSlice.reducer

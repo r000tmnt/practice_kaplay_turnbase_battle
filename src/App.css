@@ -139,6 +139,14 @@ body {
   cursor: pointer;
 }
 
+.skill-name{
+  justify-content: center;
+  background-color: black;
+  width: fit-content;
+  font-size: 1.5rem;
+  transition: all 0.3s ease-in-out
+}
+
 .not-enough{
   color: red;
   pointer-events: none;

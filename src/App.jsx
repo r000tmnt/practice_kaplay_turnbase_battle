@@ -10,6 +10,7 @@ import {
   setWave,
   setTension,
   setCurrentActivePlayer,
+  updateEffectTurnCounter,
 } from './store/game';
 import store from './store/store'
 import { setScale } from './store/setting';
@@ -197,11 +198,11 @@ function App() {
         const playerPositions = []
         const enemyPositions = []
         const playerPositionRef = [
-          // x, y
+          // x, y in percentage
           [0.7, 0.6], [0.7, 0.7], [0.8, 0.55], [0.8, 0.65], [0.8, 0.75]
         ]
         const enemyPositionRef = [
-          // x, y
+          // x, y in percentage
           [0.22, 0.6], [0.22, 0.7], [0.12, 0.55], [0.12, 0.65], [0.12, 0.75]
         ]
 
@@ -445,6 +446,10 @@ function App() {
 
   const unitLoseHandle = (tindex) => {
     // TODO - Unit lose animation
+    dispatch(
+      setTension({ current: 5 })
+    )
+
     // Get the latest state
     const units = store.getState().game.units
     tween(
@@ -456,42 +461,38 @@ function App() {
     ).onEnd(() => {
       // Remove sprite
       spriteRef.current[tindex].destroy()
-    })
 
-    dispatch(
-      setTension({ current: 5 })
-    )
-
-    // Remove the atb bar of the unit
-    if(atbRef.current) atbRef.current.removeBar(tindex)
+      // Remove the atb bar of the unit
+      if(atbRef.current) atbRef.current.removeBar(tindex)
     
-    // TODO - If no more enemy in the scene
-    let remain = 0
-    // TODO - Need to set the starting number as the length of players
-    for(let i=5; i < units.length; i++){
-      // In case if the state is not update yet
-      if(units[i].attribute.hp > 0 && i !== tindex) remain += 1
-    }
-
-    if(!remain){
-      // STOP timers
-      Array.from([0, 1, 2, 3 ,4]).forEach(i => atbRef.current.removeBar(i))
-      // Empty activeUnit stack
-      setActiveUnit([])          
-      // Reset pointer
-      setPointedTarget(-1)
-      dispatch(setCurrentActivePlayer(-1))
-      wait(0.3, () => {
-        if(wave.current !== wave.max){
-          console.log('next wave?')
-          dispatch(setWave(1))
-        }else{
-          // TODO - End of the battle
-        }        
-      })
-    }
-
-    console.log('remaing', remain)
+      // TODO - If no more enemy in the scene
+      let remain = 0
+      // TODO - Need to set the starting number as the length of players
+      for(let i=5; i < units.length; i++){
+        // In case if the state is not update yet
+        if(units[i].attribute.hp > 0 && i !== tindex) remain += 1
+      }
+  
+      if(!remain){
+        // STOP timers
+        Array.from([0, 1, 2, 3 ,4, 5, 6, 7, 8, 9]).forEach(i => atbRef.current.removeBar(i))
+        // Empty activeUnit stack
+        setActiveUnit([])          
+        // Reset pointer
+        setPointedTarget(-1)
+        dispatch(setCurrentActivePlayer(-1))
+        wait(0.3, () => {
+          if(wave.current !== wave.max){
+            console.log('next wave?')
+            dispatch(setWave(1))
+          }else{
+            // TODO - End of the battle
+          }        
+        })
+      }
+  
+      console.log('remaing', remain)      
+    })
   }
   // #endregion
 
@@ -524,7 +525,7 @@ function App() {
         if(skill){
           skillRef.current.push({
             unit,
-            skill
+            ...skill
           })
           spriteHoverEvent.paused = false
           spriteClickEvent.paused = false     
@@ -675,6 +676,23 @@ function App() {
   const onAtbBarFinished = (unit, index) => {
     if(activeUnits.find(a => a === index) !== undefined) return
     setActiveUnit((prevState) => [...prevState, index])
+
+    // Checking buff or debuff turn counter
+    const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
+
+    const ei = effectTurnCounter.findIndex(e => e.unit.name === unit.name)
+
+    if(ei >= 0){
+      if(effectTurnCounter[ei].turn > 1){
+        effectTurnCounter[ei].turn -= 1
+        dispatch(updateEffectTurnCounter(effectTurnCounter))
+      }else{
+        // Remove counter
+        effectTurnCounter.splice(ei, 1)
+        dispatch(updateEffectTurnCounter(effectTurnCounter))
+      }
+    }
+
     if(index > 4){
       const unitData = store.getState().game.units[index]
       if(unitData.attribute.hp > 0){
