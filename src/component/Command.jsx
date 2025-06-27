@@ -1,7 +1,7 @@
 import { useSelector, useDispatch } from "react-redux"
 import { updateUnit } from "../store/game"
 import skills from "../data/skill.json"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 
 export default function Command({currentActivePlayer, notifyParent}) {
     const units = useSelector(state => state.game.units)
@@ -28,8 +28,9 @@ export default function Command({currentActivePlayer, notifyParent}) {
     }
 
     const cancelAction = () => {
-      if(units[currentActivePlayer].action === 'attck'){
+      if(units[currentActivePlayer].action === 'attack'){
         dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))
+        setShowCancel(false)
       }
 
       if(units[currentActivePlayer].action === 'skill'){
@@ -37,6 +38,12 @@ export default function Command({currentActivePlayer, notifyParent}) {
         setAction('skill') // Reset skill list, back to skill menu
       }
     }
+
+    useEffect(() => {
+      if(currentActivePlayer < 0){
+        setShowCancel(false)
+      }
+    }, [currentActivePlayer])
 
     return(
       <>
@@ -86,6 +93,7 @@ export default function Command({currentActivePlayer, notifyParent}) {
         }
         <div className={`skill-list ui ${skillList.length > 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
         { skillList.map((s, index) => {
+            if(s)
               return (
                 <button key={index} className={`skill-item ${units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
                 onClick={() => {
