@@ -1,4 +1,8 @@
 import { useSelector } from "react-redux"
+import { useEffect, useRef } from "react"
+import k from "../lib/kaplay"
+
+const { wait } = k
 
 export default function BattleCounter() {
     const wave = useSelector(state => state.game.wave)
@@ -7,6 +11,18 @@ export default function BattleCounter() {
     const gameWidth = useSelector(state => state.setting.width)
     const skillName = useSelector(state => state.game.currentCastingSkill)
     // const scale = useSelector(state => state.setting.scale)
+    const labelRef = useRef(null)
+    
+    // Trigger element fade in & fade out
+    useEffect(() => {
+        if(skillName.length){
+            labelRef.current.style.opacity = 1
+            wait(0.7, () => {
+                labelRef.current.style.opacity = 0
+            })
+        }
+    }, [skillName])
+
     return (
         <>
             <div className="counter flex ui" style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
@@ -24,8 +40,10 @@ export default function BattleCounter() {
                     </div>
                 </div>
             </div>
-            <div className="skill_name flex ui" style={{ marginTop: `${!skillName.length? '-100%' : gameWidth * (1/100) + 'px' }`, left: `${(window.innerWidth - gameWidth) / 2}px` }}>
-                { skillName }
+            <div className="flex skill-name ui" 
+                style={{ width: gameWidth + 'px', marginTop: gameWidth * (8/100) + 'px', left: `${(window.innerWidth - gameWidth) / 2}px`, opacity: 0}}
+                ref={($el) => labelRef.current = $el}>
+                <label>{ skillName }</label>
             </div>        
         </>
     )
