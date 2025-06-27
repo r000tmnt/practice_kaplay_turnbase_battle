@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from "react"
 import { useSelector } from "react-redux"
 import k from '../lib/kaplay'
+import store from "../store/store"
 
 const { loop } = k
 
-export default function UnitArrow({currentActivePlayer, pointedTarget, position}) {
+export default function UnitArrow({currentActivePlayer, pointedTarget, position, skillRef}) {
     const gameWidth = useSelector(state => state.setting.width)
     const scale = useSelector(state => state.setting.scale)  
     const [target, setTarget] = useState({})
@@ -48,10 +49,31 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position}
 
     useEffect(() => {
         if(pointedTarget >=0){
-            setTarget({
-                position: 1,
-                index: pointedTarget
-            })
+            // If current action is skill
+            if(skillRef.length && currentActivePlayer >= 0){
+                const unit = store.getState().game.units[pointedTarget]
+                for(let i=0; i < skillRef.length; i++){
+                    const skill = skillRef[i]
+                    if(skill.unit.name === unit.name && skill.type === 'support'){
+                        setTarget({
+                            position: 0,
+                            index: pointedTarget
+                        })   
+                        break
+                    }else{
+                        setTarget({
+                            position: 1,
+                            index: pointedTarget
+                        })
+                        break
+                    }
+                }
+            }else{
+                setTarget({
+                    position: 1,
+                    index: pointedTarget
+                })                
+            }
         }else reset()
     }, [pointedTarget])
 
