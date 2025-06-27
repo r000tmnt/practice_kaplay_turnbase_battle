@@ -751,7 +751,8 @@ function App() {
       <UnitArrow 
         currentActivePlayer={currentActivePlayer}
         pointedTarget={pointedTarget}
-        position={position}   
+        position={position}
+        skillRef={skillRef.current}
       />
 
       <Command 
