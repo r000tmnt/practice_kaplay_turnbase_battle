@@ -105,11 +105,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
     )
 
     // Clear skill name
-    wait(0.5, () => {
-        store.dispatch(
-            setCurrentCastingSkill('')
-        )
-
+    wait(0.7, () => {
         if(skill.type !== 'Support'){
             const realTarget: Unit | null = getAvailableTargets(target, tindex, 5, 10)
             if(!realTarget) return
