@@ -141,10 +141,14 @@ body {
 
 .skill-name{
   justify-content: center;
+  transition: all 0.3s ease-in-out;
+}
+
+.skill-name > label{
   background-color: black;
   width: fit-content;
   font-size: 1.5rem;
-  transition: all 0.3s ease-in-out
+  padding: 1%;
 }
 
 .not-enough{
