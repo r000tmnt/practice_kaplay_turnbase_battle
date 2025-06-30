@@ -42,9 +42,11 @@ const {
   onHover,
   vec2,
   color,
+  setLayers,
+  layer,
   // onUpdate,
   onDraw,
-  // shader,
+  shader,
   outline,
   wait, 
   // time,
@@ -58,7 +60,8 @@ const {
   WHITE,
   RED,
   YELLOW,
-  drawUVQuad,
+  // drawUVQuad,
+  uvquad,
   // width,
   dt,
 } = k
@@ -69,6 +72,10 @@ const {
 
 const initScene = () => {
   // Scenes can accept argument from go()
+
+  // Define layers
+  setLayers(['bg', 'game', "fg"], "game")
+
   scene('game', () => {
     // Load sprites
     loadSprite('field', 'bg/nature_2/orig.png')
@@ -182,7 +189,12 @@ function App() {
     scaleUI()
 
     // Game init
-    setBg(add([sprite('field'), pos(gameWidth * -0.25, gameHeight * -0.5), scale(6)]))
+    setBg(add([
+      sprite('field'), 
+      pos(gameWidth * -0.25, gameHeight * -0.5), 
+      scale(6),
+      layer('bg') // Assign the layer to draw
+    ]))
 
     // Cleanup: Remove event listener on component unmount
     return () => {
@@ -214,7 +226,8 @@ function App() {
               pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
               rect(size, size),
               opacity(0.5),
-              area()
+              area(),
+              layer('game')
             ])
           )
 
@@ -223,7 +236,8 @@ function App() {
               pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
               rect(size, size),
               opacity(0.5),
-              area()
+              area(),
+              layer('game')
             ])
           )      
         }
@@ -287,20 +301,22 @@ function App() {
                 scale(zoom),
                 opacity(1),
                 area(),
+                layer('game'),
                 // tag
                 "unit",
                 `index_${index}`
               ])
             )          
           }else{
-            // Recreate enemy sprite if destoryed
-            if(!spriteRef.current[index] && i > 0){
+            // Recreate sprite if destoryed
+            if(!spriteRef.current[index]){
               spriteRef.current[index] = add([
                 sprite('player', { flipX: (i > 0)? false : true }), 
                 uPos, 
                 scale(zoom),
                 opacity(1),
                 area(),
+                layer('game'),
                 // tag
                 "unit",
                 `index_${index}`
@@ -434,6 +450,7 @@ function App() {
         if(skill.type !== 'Support'){
           if(attribute.hp === 0) {
             unitLoseHandle(tindex)
+            atbRef.current.removeBar(tindex)
           }else{
             dispatch(
               setTension({ current: 1 })
@@ -481,6 +498,8 @@ function App() {
         // Reset pointer
         setPointedTarget(-1)
         dispatch(setCurrentActivePlayer(-1))
+        spriteRef.current.forEach(s => s?? s.destroy())
+        spriteRef.current.splice(0)
         wait(0.3, () => {
           if(wave.current !== wave.max){
             console.log('next wave?')
@@ -553,7 +572,22 @@ function App() {
       case 'item':
         // TODO - Display avialable items
         break
-      case 'defense':
+      case 'defense':{
+        const input = {
+          action: function(){ 
+            controller(
+              () => { console.log('player defense') }
+            ) 
+          },
+          callback: () => {            
+            if(atbRef.current) atbRef.current.loopConstructor(currentActivePlayer, unit, positionRef.current)
+          }
+        }
+
+        if(atbRef.current){
+          atbRef.current.waitConstructor(currentActivePlayer, unit, input.action, input.callback)
+        }          
+      }
         // TODO - Switch to defense sprite / animation
         break
       case 'change':
@@ -676,6 +710,9 @@ function App() {
   const onAtbBarFinished = (unit, index) => {
     if(activeUnits.find(a => a === index) !== undefined) return
     setActiveUnit((prevState) => [...prevState, index])
+    const unitData = store.getState().game.units[index]
+
+    if(unitData.action === 'defense') dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
 
     // Checking buff or debuff turn counter
     const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
@@ -694,7 +731,6 @@ function App() {
     }
 
     if(index > 4){
-      const unitData = store.getState().game.units[index]
       if(unitData.attribute.hp > 0){
         // Set enemy action after 1 to 3 seconds most
         wait(Math.round(Math.random() * 2) + 1, () => {
@@ -709,26 +745,31 @@ function App() {
   useEffect(() => {
     if(wave.current > 1 && wave.current < wave.max){
       let time = 0
-      const transiiton = onDraw(() => {
+      const uvQuads = add([
+        uvquad(gameWidth * 2, gameHeight),
+        shader('waveTransition', { "u_time": time }),
+        layer("fg")
+      ])
+      const transition = onDraw(() => {
         time += dt()
-
         if(time >= 3){
-          transiiton.cancel()
-          // transiiton.destroy()
-        }else{
-          drawUVQuad({
-            width: gameWidth * 2,
-            height: gameHeight,
-            shader: 'waveTransition',
-            uniform: {
-              "u_time": time,
-            }
+          transition.cancel()
+          // transition.destroy()
+          uvQuads.destroy()
+          wait(1, () => {
+            drawCharacters()
           })          
+        }else{
+          // drawUVQuad({
+          //   width: gameWidth * 2,
+          //   height: gameHeight,
+          //   shader: 'waveTransition',
+          //   uniform: {
+          //     "u_time": time,
+          //   }
+          // })  
+          uvQuads.uniform["u_time"] = time
         }
-      })
-
-      wait(1, () => {
-        drawCharacters()
       })
     }
   }, [wave])
