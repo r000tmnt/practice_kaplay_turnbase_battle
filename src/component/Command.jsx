@@ -42,6 +42,7 @@ export default function Command({currentActivePlayer, notifyParent}) {
     useEffect(() => {
       if(currentActivePlayer < 0){
         setShowCancel(false)
+        setSkillList([])
       }
     }, [currentActivePlayer])
 
@@ -95,7 +96,7 @@ export default function Command({currentActivePlayer, notifyParent}) {
         { skillList.map((s, index) => {
             if(s)
               return (
-                <button key={index} className={`skill-item ${units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
+                <button key={index} className={`skill-item ${units[currentActivePlayer] !== undefined && units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
                 onClick={() => {
                   setShowCancel(true)
                   notifyParent('skill', units[currentActivePlayer], s)
