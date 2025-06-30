@@ -104,124 +104,126 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
         setCurrentCastingSkill(skill.name)
     )
 
-    // Clear skill name
-    wait(0.7, () => {
-        if(skill.type !== 'Support'){
-            const realTarget: Unit | null = getAvailableTargets(target, tindex, 5, 10)
-            if(!realTarget) return
+    return new Promise((resolve, reject) => {
+        // Calculate the number or damage
+        wait(0.7, () => {
+            if(skill.type !== 'Support'){
+                const realTarget: Unit | null = getAvailableTargets(target, tindex, 5, 10)
+                if(!realTarget) return
 
-            const tension = store.getState().game.tension
+                const tension = store.getState().game.tension
 
-            const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
+                const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
 
-            // 0 means ALL
-            attribute.mp -= skill.cost.mp? skill.cost.mp : attribute.mp
-            if(skill.cost.tension !== undefined) 
+                // 0 means ALL
+                attribute.mp -= skill.cost.mp? skill.cost.mp : attribute.mp
+                if(skill.cost.tension !== undefined) 
+                    store.dispatch(
+                        setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
+                    )
+
+                let dmg = 0
+
+                if(skill.type === 'InFight'){
+                    const baseNumber = unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))
+                    const enemyDef = Math.round(attribute.def * (attribute.def / 100))
+                    dmg = baseNumber - enemyDef 
+                }
+
+                if(skill.type === 'GunFight'){
+                    const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
+                    const enemyDef = Math.round(attribute.def * (attribute.will / 100))
+                    dmg = baseNumber - enemyDef 
+                }
+
+                if(skill.type === 'Super'){
+                    const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100)) + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
+                    const enemyDef = Math.round(attribute.def * (attribute.will / 100)) + Math.round(attribute.def * (attribute.def / 100))
+                    dmg = baseNumber - enemyDef 
+                }
+
+                // Add skill based damage
+                if(!skill.attribute.dmg) return
+                const skillDmg = Math.floor(Math.random() * skill.attribute.dmg.max) + skill.attribute.dmg.min
+                dmg += Math.round(dmg * skillDmg)
+                // Add tension bonus 
+                dmg += Math.round(dmg * (tension.current / 100))   
+
+                const crit = unit.attribute.luck / 100
+                
+                const rng = Math.random()
+
+                if(rng <= crit){
+                    dmg = Math.round(dmg * 1.5)
+                }
+
+                // If the target take defense
+                if(realTarget.action === 'defense') dmg = Math.round(dmg / 2)    
+
+                attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
+                
                 store.dispatch(
-                    setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
+                    updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
                 )
 
-            let dmg = 0
+                // return showText(unit, dmg, rng, crit, tindex, attribute)    
+                resolve({ unit, number: dmg, crit: rng <= crit, tindex, attribute })
+            }else{
+                const realTarget: Unit | null = getAvailableTargets(target, tindex, 0, 5)
+                if(!realTarget) return
 
-            if(skill.type === 'InFight'){
-                const baseNumber = unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))
-                const enemyDef = Math.round(attribute.def * (attribute.def / 100))
-                dmg = baseNumber - enemyDef 
-            }
+                const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
 
-            if(skill.type === 'GunFight'){
-                const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
-                const enemyDef = Math.round(attribute.def * (attribute.will / 100))
-                dmg = baseNumber - enemyDef 
-            }
+                const tension = store.getState().game.tension
 
-            if(skill.type === 'Super'){
-                const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100)) + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
-                const enemyDef = Math.round(attribute.def * (attribute.will / 100)) + Math.round(attribute.def * (attribute.def / 100))
-                dmg = baseNumber - enemyDef 
-            }
+                const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
 
-            // Add skill based damage
-            if(!skill.attribute.dmg) return
-            const skillDmg = Math.floor(Math.random() * skill.attribute.dmg.max) + skill.attribute.dmg.min
-            dmg += Math.round(dmg * skillDmg)
-            // Add tension bonus 
-            dmg += Math.round(dmg * (tension.current / 100))   
+                // 0 means ALL
+                attribute.mp -= skill.cost.mp? skill.cost.mp : attribute.mp
+                if(skill.cost.tension !== undefined)
+                    store.dispatch(
+                        setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
+                    )
 
-            const crit = unit.attribute.luck / 100
-            
-            const rng = Math.random()
+                let number = 0
 
-            if(rng <= crit){
-                dmg = Math.round(dmg * 1.5)
-            }
+                if(skill.attribute.buff){
+                    //...
+                    Object.entries(skill.attribute.buff).forEach((param) => {
+                        if(param[0] !== 'turn'){
+                            attribute[param[0]] += Math.round(attribute[param[0]] * param[1])
+                            if(param[0] == 'hp' || param[0] == 'mp'){
+                                number = Math.round(attribute[param[0]] * param[1])
+                            }                    
+                        }else{
+                            // Store the number of turns
+                            if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
+                        }
+                    })
 
-            // If the target take defense
-            if(realTarget.action === 'defense') dmg = Math.round(dmg / 2)    
+                }
 
-            attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
-            
-            store.dispatch(
-                updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
-            )
+                if(skill.attribute.debuff){
+                    //...
+                    Object.entries(skill.attribute.debuff).forEach((param) => {
+                        if(param[0] !== 'turn'){
+                            attribute[param[0]] -= Math.round(attribute[param[0]] * param[1])
+                            if(param[0] == 'hp' || param[0] == 'mp'){
+                                number = Math.round(attribute[param[0]] * param[1])
+                            }                    
+                        }else{
+                            // Store the number of turns
+                            if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
+                        }
+                    })            
+                }
 
-            // return showText(unit, dmg, rng, crit, tindex, attribute)    
-            return { unit, number: dmg, crit: rng <= crit, tindex, attribute }    
-        }else{
-            const realTarget: Unit | null = getAvailableTargets(target, tindex, 0, 5)
-            if(!realTarget) return
-
-            const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
-
-            const tension = store.getState().game.tension
-
-            const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
-
-            // 0 means ALL
-            attribute.mp -= skill.cost.mp? skill.cost.mp : attribute.mp
-            if(skill.cost.tension !== undefined)
                 store.dispatch(
-                    setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
+                    updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
                 )
 
-            let number = 0
-
-            if(skill.attribute.buff){
-                //...
-                Object.entries(skill.attribute.buff).forEach((param) => {
-                    if(param[0] !== 'turn'){
-                        attribute[param[0]] += Math.round(attribute[param[0]] * param[1])
-                        if(param[0] == 'hp' || param[0] == 'mp'){
-                            number = Math.round(attribute[param[0]] * param[1])
-                        }                    
-                    }else{
-                        // Store the number of turns
-                        if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
-                    }
-                })
-
+                resolve({ unit, number, crit: false, tindex, attribute })    
             }
-
-            if(skill.attribute.debuff){
-                //...
-                Object.entries(skill.attribute.debuff).forEach((param) => {
-                    if(param[0] !== 'turn'){
-                        attribute[param[0]] -= Math.round(attribute[param[0]] * param[1])
-                        if(param[0] == 'hp' || param[0] == 'mp'){
-                            number = Math.round(attribute[param[0]] * param[1])
-                        }                    
-                    }else{
-                        // Store the number of turns
-                        if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
-                    }
-                })            
-            }
-
-            store.dispatch(
-                updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
-            )
-
-            return { unit, number, crit: false, tindex, attribute }    
-        }
+        })        
     })
 }
