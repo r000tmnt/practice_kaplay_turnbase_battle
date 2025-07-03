@@ -11,6 +11,7 @@ export default function BattleCounter() {
     const gameWidth = useSelector(state => state.setting.width)
     const skillName = useSelector(state => state.game.currentCastingSkill)
     // const scale = useSelector(state => state.setting.scale)
+    const wrapperRef = useRef(null)
     const labelRef = useRef(null)
     
     // Trigger element fade in & fade out
@@ -23,8 +24,18 @@ export default function BattleCounter() {
         }
     }, [skillName])
 
+    // Hide the counters on transition
+    useEffect(() => {
+        if(wave > 1){
+            wrapperRef.current.style.opacity = 0
+            wait(3, () => {
+                wrapperRef.current.style.opacity = 1
+            })
+        }
+    }, [wave])
+
     return (
-        <>
+        <div ref={($el) => wrapperRef.current = $el}>
             <div className="counter flex ui" style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
                 <div>
                     <div className='wave'>
@@ -45,6 +56,6 @@ export default function BattleCounter() {
                 ref={($el) => labelRef.current = $el}>
                 <label>{ skillName }</label>
             </div>        
-        </>
+        </div>
     )
 }

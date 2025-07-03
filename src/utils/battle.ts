@@ -227,3 +227,14 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
         })        
     })
 }
+
+export const isEscapable = async(unit: Unit) => {
+    const posibility = (unit.attribute.luck + Math.round(unit.attribute.spd * (unit.attribute.luck / 100))) * 10
+
+    const random = Math.floor(Math.random() * 100)
+
+    console.log('escape posibility: ', posibility)
+    console.log('rng: ', random)
+
+    return random <= posibility
+}

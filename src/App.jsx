@@ -17,6 +17,7 @@ import { setScale } from './store/setting';
 
 // Units data
 import unit from './data/unit';
+import skill from './data/skill.json'
 
 // Components
 import BattleCounter from './component/BattleCounter';
@@ -24,7 +25,7 @@ import ATB from './component/ATB';
 import UnitArrow from './component/UnitArrow';
 import Command from './component/Command';
 
-import { attack, castSkill } from './utils/battle';
+import { attack, castSkill, isEscapable } from './utils/battle';
 
 const { 
   scene, 
@@ -288,42 +289,25 @@ function App() {
           data = (i > 0)? unit.enemy[j] : unit.player[j]
         }
 
+        // 128px is the height of the sprite
+        // 20px is the height of the rect
         if(data){
-          // 128px is the height of the sprite
-          // 20px is the height of the rect
-          const uPos = pos(x - (128 / 2), y - (128 + 20))
           player.push({...data})
-          if(wave.current === 1){
-            spriteRef.current.push(
-              add([
-                sprite('player', { flipX: (i > 0)? false : true }), 
-                uPos, 
-                scale(zoom),
-                opacity(1),
-                area(),
-                layer('game'),
-                // tag
-                "unit",
-                `index_${index}`
-              ])
-            )          
-          }else{
-            // Recreate sprite if destoryed
-            if(!spriteRef.current[index]){
-              spriteRef.current[index] = add([
-                sprite('player', { flipX: (i > 0)? false : true }), 
-                uPos, 
-                scale(zoom),
-                opacity(1),
-                area(),
-                layer('game'),
-                // tag
-                "unit",
-                `index_${index}`
-              ])
-            }
-          }
-        }else break
+
+          spriteRef.current.push(
+            add([
+              sprite('player', { flipX: (i > 0)? false : true }), 
+              pos(x - (128 / 2), y - (128 + 20)), 
+              scale(zoom),
+              opacity(1),
+              area(),
+              layer('game'),
+              // tag
+              "unit",
+              `index_${index}`
+            ])
+          )          
+        }  
       }              
     }     
     // console.log('dispath', player)
@@ -343,7 +327,7 @@ function App() {
 
   // #region Enemy AI
   const enemyAI = (unit, index) => {
-    const actions = [ 'attack', 'skill', 'item', 'defense', 'change', 'escape' ]
+    const actions = [ 'attack', 'skill', 'defense', 'escape' ]
               
     const rng = Math.random() * actions.length
 
@@ -374,18 +358,30 @@ function App() {
           input.action = function(){ controller(() => attack(unit, units[target], index, target), index ) } 
         }
         break
-      case 'skill':
-        input.action = function(){ controller(async() => { console.log('Enemy skill')}, index ) } 
+      case 'skill':{
+          const skillList = unit.skill.map(s => skill[s])
+
+          // Picking skill
+          const skillToCast = skillList[Math.floor(Math.random() * (skillList.length - 1))]
+          let target
+          // Picking target
+          if(skillToCast.type === 'support')
+            target = Math.round(Math.random() * 4) + 5
+          else
+            target = Math.round(Math.random() * 4)
+
+          input.action = function(){ controller(async() => castSkill(unit, units[target], index, target, skill), index ) } 
+        }
         break
-      case 'item':
-        input.action = function(){ controller(async() => { console.log('Enemy item')}, index ) } 
-        break
+      // case 'item':
+      //   input.action = function(){ controller(async() => { console.log('Enemy item')}, index ) } 
+      //   break
       case 'defense':
         input.action = function(){ controller(async() => { console.log('Enemy defense')}, index ) } 
         break
-      case 'change':
-        input.action = function(){ controller(async() => { console.log('Enemy change')}, index ) } 
-        break
+      // case 'change':
+      //   input.action = function(){ controller(async() => { console.log('Enemy change')}, index ) } 
+      //   break
       case 'escape':
         input.action = function(){ controller(async() => { console.log('Enemy escape')}, index ) } 
         break
@@ -461,6 +457,20 @@ function App() {
     })
   }
 
+  const stopAllUnit = () => {
+    // STOP timers
+    Array.from([0, 1, 2, 3 ,4, 5, 6, 7, 8, 9]).forEach(i => {
+      if(atbRef.current) atbRef.current.removeBar(i)
+    })
+    // Empty activeUnit stack
+    setActiveUnit([])          
+    // Reset pointer
+    setPointedTarget(-1)
+    dispatch(setCurrentActivePlayer(-1))
+    spriteRef.current.forEach(s => s?? s.destroy())
+    spriteRef.current.splice(0)
+  }
+
   const unitLoseHandle = (tindex) => {
     // TODO - Unit lose animation
     dispatch(
@@ -491,15 +501,7 @@ function App() {
       }
   
       if(!remain){
-        // STOP timers
-        Array.from([0, 1, 2, 3 ,4, 5, 6, 7, 8, 9]).forEach(i => atbRef.current.removeBar(i))
-        // Empty activeUnit stack
-        setActiveUnit([])          
-        // Reset pointer
-        setPointedTarget(-1)
-        dispatch(setCurrentActivePlayer(-1))
-        spriteRef.current.forEach(s => s?? s.destroy())
-        spriteRef.current.splice(0)
+        stopAllUnit()
         wait(0.3, () => {
           if(wave.current !== wave.max){
             console.log('next wave?')
@@ -594,7 +596,36 @@ function App() {
         // TODO - Font line to back, back to front line
         break
       case 'escape':
-        // TODO - Get the possiblity to success
+        isEscapable(unit).then(result => {      
+          if(result){
+            // Escape animation
+            for(let i=0; i < 5; i++){
+              const sprite = spriteRef.current[i]
+              if(sprite.opacity > 0){
+                sprite.flipX = !sprite.flipX
+                
+                tween(
+                  sprite.pos, 
+                  vec2(gameWidth, sprite.pos.y), 
+                  0.5,
+                  (pos) => sprite.pos = pos,
+                  easings.easeInOutQuad
+                )
+              }
+            }
+
+            // End the battle
+            stopAllUnit()
+            // Result screen
+          }else{
+            setActiveUnit((prevState) => prevState.filter((a) => a !== currentActivePlayer))
+            dispatch(setCurrentActivePlayer(-1))
+            dispatch(
+              updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })
+            )            
+            if(atbRef.current) atbRef.current.loopConstructor(currentActivePlayer, unit, positionRef.current)
+          }
+        })
         break
     } 
   }
