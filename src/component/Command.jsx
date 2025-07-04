@@ -1,13 +1,16 @@
 import { useSelector, useDispatch } from "react-redux"
 import { updateUnit } from "../store/game"
 import skills from "../data/skill.json"
+import items from '../data/items.json'
 import { useState, useEffect } from "react"
 
 export default function Command({currentActivePlayer, notifyParent}) {
     const units = useSelector(state => state.game.units)
     const gameWidth = useSelector(state => state.setting.width)
+    const inventory = useSelector(state => state.game.inventory)
     const [showCancel, setShowCancel] = useState(false)
     const [skillList, setSkillList] = useState([])
+    const [itemList, setItemList] = useState([])
     const dispatch = useDispatch()
 
     const setAction = (action) => {
@@ -24,6 +27,25 @@ export default function Command({currentActivePlayer, notifyParent}) {
             return [...prev, skills[s]]
           });
         });
+      }
+
+      if(action === 'item'){
+        inventory.forEach(item => {
+          for(let i=0; i < item.amount; i++){
+            const data = items.find(d => d.id === item.id)
+            if(data.stackable){
+              data.amount = item.amount
+            }else{
+              data.amount = 1
+            }
+            
+            setItemList(prev => {
+              return [...prev, data]
+            })
+
+            if(data.stackable) break
+          }
+        })
       }
     }
 
@@ -117,6 +139,24 @@ export default function Command({currentActivePlayer, notifyParent}) {
               )
             }) }
             <button onClick={() => dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))}>BACK</button>
+        </div>
+
+        {
+          // Item menu
+        }
+        <div className={`item-list ui ${itemList.length > 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
+          {
+            itemList.map((item, index) => {
+              if(item)
+                return (
+                  <button key={index} className={`item`}>
+                    <div className='skill-name'>{item.name}</div>
+                    <div className='skill-cost'>{item.amount}</div>
+                  </button>
+                )
+            })
+          }
+          <button onClick={() => dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))}>BACK</button>
         </div>
 
         <button 

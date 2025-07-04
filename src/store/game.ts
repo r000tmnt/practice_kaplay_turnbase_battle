@@ -1,5 +1,6 @@
 import { createSlice } from "@reduxjs/toolkit";
 import { Unit, Position } from "../model/unit";
+// import { Item } from "../model/item";
 
 const gameSlice = createSlice({
     name: 'game',
@@ -16,7 +17,13 @@ const gameSlice = createSlice({
         units: [] as Unit[],
         currentActivePlayer: -1,
         currentCastingSkill: '',
-        effectTurnCounter: [] as {unit: Unit, turn: number}[]
+        effectTurnCounter: [] as {unit: Unit, turn: number}[],
+        inventory: [
+            { id: 1, amount: 5 },
+            { id: 2, amount: 5 },
+            { id: 3, amount: 5 },
+        ] as { id: number, amount: number }[],
+        stopAll: false,
     },
     reducers : {
         setUnits: (state, action) => {
@@ -57,9 +64,19 @@ const gameSlice = createSlice({
         },
         updateEffectTurnCounter: (state, action) => {
             state.effectTurnCounter = action.payload
+        },
+        setInventory: (state, action) => {
+            state.inventory = action.payload
+        },
+        setAllToStop: (state, action) => {
+            state.stopAll = action.payload
         }
     }
 })
 
-export const { setUnits, updateUnit, setWave, setTension, setCurrentActivePlayer, setCurrentCastingSkill, updateEffectTurnCounter } = gameSlice.actions
+export const { 
+    setUnits, updateUnit, setWave, 
+    setTension, setCurrentActivePlayer, setCurrentCastingSkill, 
+    updateEffectTurnCounter, setAllToStop, setInventory
+} = gameSlice.actions
 export default gameSlice.reducer
