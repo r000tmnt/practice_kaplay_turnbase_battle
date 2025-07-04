@@ -9,7 +9,7 @@ const {
     loop, 
     rect,
     pos,
-    outline,
+    // outline,
     easings,
     tween,
     color,
@@ -24,14 +24,19 @@ export default function ATB({
     pause, // Pause timers other than one that is running,
 }) {
     const timers = useRef([])
-    const gameWidth = useSelector(state => state.setting.width)   
+    const gameWidth = useSelector(state => state.setting.width)  
+    const stopAll = useSelector(state => state.game.stopAll) 
     // const scale = useSelector(state => state.setting.scale)
 
     const loopConstructor = (index, unit, position, controller=null, callBack=null) => {
         console.log(index)
 
+        if(stopAll) return
+
         wait(1, () => {
             console.log(index, 'after wait')
+
+            if(stopAll) return
 
             if(activeUnits.find(a => a === index)) return
 
@@ -70,12 +75,14 @@ export default function ATB({
                     controller: controller?
                     controller(callBack) :
                     loop(0.1, () => {
-                        // count += 1
-                        // console.log(count)
-                        const add = Math.floor(100/time)
-                        percentage = (percentage + add > 100)? 100 : percentage + add
-                        const newWidth = width * (percentage/100)
-                        tween(bar.width, newWidth, 0, (p) => bar.width = p, easings.linear)
+                        if(stopAll){
+                            timerEndAction(unit, index)
+                        }else{
+                            const add = Math.floor(100/time)
+                            percentage = (percentage + add > 100)? 100 : percentage + add
+                            const newWidth = width * (percentage/100)
+                            tween(bar.width, newWidth, 0, (p) => bar.width = p, easings.linear)
+                        }
                     }, time).onEnd(() => {
                         console.log(`timer ${index} ended`)
                         if(callBack) { callBack() } 
@@ -99,6 +106,8 @@ export default function ATB({
     // }, [timers])
     
     const waitConstructor = (index, unit, action, callBack=null) => {
+        if(stopAll) return
+
         if(activeUnits.find(a => a === index)) return
 
         if(timers.current.find((t) => t.index === index)) return
@@ -112,6 +121,7 @@ export default function ATB({
             {
                 index,
                 controller: wait(time, () => {
+                    if(stopAll) return
                     try {
                         action() 
                     } catch (error) {
@@ -120,7 +130,7 @@ export default function ATB({
                     }
                 }).onEnd(() => {
                     removeBar(index)
-                    if(callBack) callBack()
+                    if(callBack && !stopAll) callBack()
                 })
             }            
         )
@@ -143,7 +153,7 @@ export default function ATB({
     const timerEndAction = (unit, index) => {
         console.log(unit.name, 'action after timer ended')
         // Notify the parent with the index
-        notifyParent(unit, index)
+        if(!stopAll) notifyParent(unit, index)
         // Remove timer
         removeBar(index)
     }    

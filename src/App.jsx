@@ -11,6 +11,7 @@ import {
   setTension,
   setCurrentActivePlayer,
   updateEffectTurnCounter,
+  setAllToStop
 } from './store/game';
 import store from './store/store'
 import { setScale } from './store/setting';
@@ -616,6 +617,7 @@ function App() {
 
             // End the battle
             stopAllUnit()
+            dispatch(setAllToStop(true))
             // Result screen
           }else{
             setActiveUnit((prevState) => prevState.filter((a) => a !== currentActivePlayer))
