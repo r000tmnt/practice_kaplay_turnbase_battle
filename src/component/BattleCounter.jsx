@@ -16,7 +16,7 @@ export default function BattleCounter() {
     
     // Trigger element fade in & fade out
     useEffect(() => {
-        if(skillName.length){
+        if(skillName && skillName.length){
             labelRef.current.style.opacity = 1
             wait(0.7, () => {
                 labelRef.current.style.opacity = 0
