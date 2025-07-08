@@ -115,48 +115,62 @@ export default function Command({currentActivePlayer, notifyParent}) {
           // Skill menu 
         }
         <div className={`skill-list ui ${skillList.length > 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
-        { skillList.map((s, index) => {
-            if(s)
-              return (
-                <button key={index} className={`skill-item ${units[currentActivePlayer] !== undefined && units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
-                onClick={() => {
-                  setShowCancel(true)
-                  notifyParent('skill', units[currentActivePlayer], s)
-                  setSkillList([])
-                }}>
-                  {/* <img src={s.icon} alt={s.name} /> */}
-                  <div className='skill-name'>{s.name}</div>
-                  <div className='skill-cost'>{
-                    Object.keys(s.cost).map((key, i) => {
-                      return (
-                        <span key={i}>
-                          {key}: {s.cost[key]} 
-                        </span>
-                      )
-                    })  
-                  }</div>
-                </button>
-              )
-            }) }
-            <button onClick={() => dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))}>BACK</button>
+          <div className="action">
+            { skillList.map((s, index) => {
+                if(s)
+                  return (
+                    <button key={index} className={`skill-item ${units[currentActivePlayer] !== undefined && units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
+                    onClick={() => {
+                      setShowCancel(true)
+                      notifyParent('skill', units[currentActivePlayer], s)
+                      setSkillList([])
+                    }}>
+                      {/* <img src={s.icon} alt={s.name} /> */}
+                      <div className='skill-name'>{s.name}</div>
+                      <div className='skill-cost'>{
+                        Object.keys(s.cost).map((key, i) => {
+                          return (
+                            <span key={i}>
+                              {key}: {s.cost[key]} 
+                            </span>
+                          )
+                        })  
+                      }</div>
+                    </button>
+                  )
+                }) }
+          </div>
+          <button className="back" style={{ width: '100%' }}
+          onClick={() => {
+            dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))
+            setSkillList([])
+          }}>BACK</button>
         </div>
 
         {
           // Item menu
         }
         <div className={`item-list ui ${itemList.length > 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
-          {
-            itemList.map((item, index) => {
-              if(item)
-                return (
-                  <button key={index} className={`item`}>
-                    <div className='skill-name'>{item.name}</div>
-                    <div className='skill-cost'>{item.amount}</div>
-                  </button>
-                )
-            })
-          }
-          <button onClick={() => dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))}>BACK</button>
+          <div className="action">
+            { itemList.map((item, index) => {
+                if(item)
+                  return (
+                    <button key={index} className={`item`} onClick={() => {
+                      setShowCancel(true)
+                      notifyParent('item', units[currentActivePlayer], item)
+                      setItemList([])
+                    }}>
+                      <div className='skill-name'>{item.name}</div>
+                      <div className='skill-cost'>{item.amount}</div>
+                    </button>
+                  )
+              }) }
+          </div>
+          <button className="back" style={{ width: '100%' }}
+          onClick={() => {
+            dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))
+            setItemList([])
+          }}>BACK</button>
         </div>
 
         <button 
