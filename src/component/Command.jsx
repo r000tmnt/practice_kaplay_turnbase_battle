@@ -59,6 +59,11 @@ export default function Command({currentActivePlayer, notifyParent}) {
         setShowCancel(false)
         setAction('skill') // Reset skill list, back to skill menu
       }
+
+      if(units[currentActivePlayer].action === 'item'){
+        setShowCancel(false)
+        setAction('item') // Reset item list, back to item menu
+      }
     }
 
     useEffect(() => {

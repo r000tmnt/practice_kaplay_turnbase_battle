@@ -87,13 +87,12 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position,
     }, [pointedTarget])
 
     useEffect(() => {
-        // if(currentActivePlayer >= 0){
-        //     setTarget({
-        //         position: 0,
-        //         index: currentActivePlayer
-        //     })   
-        // }else reset()
-        if(currentActivePlayer < 0) reset()
+        if(currentActivePlayer >= 0){
+            setTarget({
+                position: 0,
+                index: currentActivePlayer
+            })   
+        }else reset()
     }, [currentActivePlayer])
 
     return(
