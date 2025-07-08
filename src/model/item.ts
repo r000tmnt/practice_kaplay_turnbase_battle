@@ -7,9 +7,7 @@ interface Item {
     stackable: boolean,
     amount?: number,
     desc: string,
-    effect: {
-        target: Record<AllowedAttributes, number>,
-    },
+    effect: Record<AllowedAttributes, number>,
 }
 
 export { Item }
