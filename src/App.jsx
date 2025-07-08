@@ -52,7 +52,7 @@ const {
   outline,
   wait, 
   // time,
-  // loop,
+  loop,
   opacity,
   // rotate,
   // animate,
@@ -280,7 +280,7 @@ function App() {
 
         if(wave.current > 1){
           const units = store.getState().game.units
-          if(!units[index]) return
+          if(!units[index]) break
           data = JSON.parse(JSON.stringify(units[index]))
           if(i > 0){
             // Refill the hp and mp
@@ -317,11 +317,16 @@ function App() {
       setUnits(player)            
     )
 
-    // Set ATB bars 
-    player.forEach((p, index) => {
-      if(atbRef.current){
-        atbRef.current.loopConstructor(index, p, position)
-      }
+    const conditionLoop = loop(1, () => {
+      if(!store.getState().game.stopAll){
+        conditionLoop.cancel()
+        // Set ATB bars 
+        player.forEach((p, index) => {
+          if(atbRef.current){
+            atbRef.current.loopConstructor(index, p, position)
+          }
+        })      
+      }      
     })
   }
 
@@ -414,6 +419,7 @@ function App() {
   }
 
   const showText = ({unit, number, crit, tindex, attribute}) => {
+    if(!spriteRef.current[tindex]) return
     // Create text
     const resultText = add([
       text(number, { size: crit? 48 : 36 }),
@@ -841,6 +847,7 @@ function App() {
           // transition.destroy()
           uvQuads.destroy()
           wait(1, () => {
+            dispatch(setAllToStop(false))
             drawCharacters()
           })          
         }else{
