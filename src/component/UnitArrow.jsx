@@ -5,9 +5,11 @@ import store from "../store/store"
 
 const { loop } = k
 
-export default function UnitArrow({currentActivePlayer, pointedTarget, position, skillRef, itemRef}) {
+export default function UnitArrow({position, skillRef, itemRef}) {
     const gameWidth = useSelector(state => state.setting.width)
     const scale = useSelector(state => state.setting.scale)  
+    const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
+    const pointedTarget = useSelector(state => state.game.pointedTarget)
     const [target, setTarget] = useState({})
     const animation = useRef({})
     

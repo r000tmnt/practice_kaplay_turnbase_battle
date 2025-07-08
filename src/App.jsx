@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import './App.css'
 import k from './lib/kaplay';
 
@@ -7,8 +7,11 @@ import { useSelector, useDispatch } from 'react-redux';
 import {
   setUnits,
   updateUnit,
+  setActiveUnits,
+  setTimerToAct,
   setWave,
   setTension,
+  setPointedTarget,
   setCurrentActivePlayer,
   updateEffectTurnCounter,
   setAllToStop
@@ -45,6 +48,7 @@ const {
   vec2,
   color,
   setLayers,
+  getLayers,
   layer,
   // onUpdate,
   onDraw,
@@ -76,7 +80,8 @@ const initScene = () => {
   // Scenes can accept argument from go()
 
   // Define layers
-  setLayers(['bg', 'game', "fg"], "game")
+  const layers = getLayers()
+  if(!layers) setLayers(['bg', 'game', "fg"], "game")
 
   scene('game', () => {
     // Load sprites
@@ -152,11 +157,7 @@ function App() {
   const [bg, setBg] = useState({})
   const [position, setPosition] = useState([])
   const positionRef = useRef(null)
-  const [timerToAct, setTimerToAct] = useState({})
   const spriteRef = useRef([])
-  const [activeUnits, setActiveUnit] = useState([])
-  const next = useMemo(() => activeUnits.length? activeUnits.find(a => a < 5) : -1, [activeUnits])
-  const [pointedTarget, setPointedTarget] = useState(-1)
   const skillRef = useRef([])
   const itemRef = useRef([])
 
@@ -166,6 +167,7 @@ function App() {
   const wave = useSelector(state => state.game.wave)
   // const tension = useSelector(state => state.game.tension)
   const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
+  const activeUnits = useSelector(state => state.game.activeUnits)
 
   const dispatch = useDispatch()
 
@@ -319,6 +321,9 @@ function App() {
 
     const conditionLoop = loop(1, () => {
       if(!store.getState().game.stopAll){
+        // check sprites
+        if(spriteRef.current.length !== player.length) return
+        if(spriteRef.current.findIndex(s => s.opacity === 0) >= 0) return
         conditionLoop.cancel()
         // Set ATB bars 
         player.forEach((p, index) => {
@@ -394,7 +399,10 @@ function App() {
         break
     }
 
-    setActiveUnit(prevState => prevState.filter(a => a !== index))
+    const copy = JSON.parse(JSON.stringify(activeUnits))
+    dispatch(
+      setActiveUnits(copy.filter(a => a !== index))
+    )
 
     if(atbRef.current){
       atbRef.current.waitConstructor(index, unit, input.action, input.callback)
@@ -405,7 +413,7 @@ function App() {
   // #region Shared actions
   const controller = (actionFunction, index, actionCallBack = null) => {
     // Pause timers of the other units
-    setTimerToAct({ index, value: true })
+    dispatch(setTimerToAct({ index, value: true }))
     
     actionFunction().then((result) => {
       if(result !== undefined) {
@@ -414,7 +422,7 @@ function App() {
 
       if(actionCallBack) actionCallBack()
       // Resume timers of the other units
-      setTimerToAct({ index, value: false }) 
+      dispatch(setTimerToAct({ index, value: false }) )
     })
   }
 
@@ -471,9 +479,9 @@ function App() {
       if(atbRef.current) atbRef.current.removeBar(i)
     })
     // Empty activeUnit stack
-    setActiveUnit([])          
+    dispatch(setActiveUnits([]))        
     // Reset pointer
-    setPointedTarget(-1)
+    dispatch(setPointedTarget(-1)) 
     dispatch(setCurrentActivePlayer(-1))
     spriteRef.current.forEach(s => s?? s.destroy())
     spriteRef.current.splice(0)
@@ -546,7 +554,7 @@ function App() {
         // Find available target
           for(let i=5; i < 10; i++){
             if(units[i] && units[i].attribute.hp > 0){
-              setPointedTarget(i - 5)
+              dispatch(setPointedTarget(i - 5)) 
               break
             }
           }
@@ -565,7 +573,7 @@ function App() {
             // Find available target
             for(let i=5; i < 10; i++){
               if(units[i] && units[i].attribute.hp > 0){
-                setPointedTarget(i - 5)
+                dispatch(setPointedTarget(i - 5)) 
                 break
               }
             }      
@@ -573,7 +581,7 @@ function App() {
             // Find available target
             for(let i=0; i <= 4; i++){
               if(units[i] && units[i].attribute.hp > 0){
-                setPointedTarget(i)
+                dispatch(setPointedTarget(i)) 
                 break
               }
             }               
@@ -594,7 +602,7 @@ function App() {
           // Find available target
           for(let i=0; i <= 4; i++){
             if(units[i] && units[i].attribute.hp > 0){
-              setPointedTarget(i)
+              dispatch(setPointedTarget(i)) 
               break
             }
           }             
@@ -645,7 +653,10 @@ function App() {
             dispatch(setAllToStop(true))
             // Result screen
           }else{
-            setActiveUnit((prevState) => prevState.filter((a) => a !== currentActivePlayer))
+            const copy = JSON.parse(JSON.stringify(activeUnits))
+            dispatch(
+              setActiveUnits(copy.filter(a => a !== currentActivePlayer))
+            )
             dispatch(setCurrentActivePlayer(-1))
             dispatch(
               updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })
@@ -724,11 +735,14 @@ function App() {
       break;
     }
 
-    setPointedTarget(-1)
+    dispatch(setPointedTarget(-1))
     spriteHoverEvent.paused = true
     spriteClickEvent.paused = true        
 
-    setActiveUnit((prevState) => prevState.filter((a) => a !== currentActivePlayer))
+    const copy = JSON.parse(JSON.stringify(activeUnits))
+    dispatch(
+      setActiveUnits(copy.filter(a => a !== currentActivePlayer))
+    )
     if(atbRef.current){
       atbRef.current.waitConstructor(currentActivePlayer, unit, input.action, input.callback)
     }    
@@ -751,25 +765,25 @@ function App() {
     switch(units.action){
       case 'attack': {
         const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
-        if(target > 4) setPointedTarget(target - 5)
+        if(target > 4) dispatch(setPointedTarget(target - 5)) 
       }
       break;
       case 'skill':{
         const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
         const skill = skillRef.current.find(s => s.unit.name === units.name)
         if(skill?.type !== 'Support'){
-          if(target > 4) setPointedTarget(target - 5)
+          if(target > 4) dispatch(setPointedTarget(target - 5)) 
         } 
-        else if(target > 4) setPointedTarget(target - 5)
-        else setPointedTarget(target)
+        else if(target > 4) dispatch(setPointedTarget(target - 5)) 
+        else dispatch(setPointedTarget(target)) 
       }
       break;
       case 'item':{
         const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
         const item = itemRef.current.find(item => item.unit.name === units.name)
         if(item){
-          if(target > 4) setPointedTarget(target - 5)
-          else setPointedTarget(target)
+          if(target > 4) dispatch(setPointedTarget(target - 5)) 
+          else dispatch(setPointedTarget(target)) 
         }
       }
       break;
@@ -785,7 +799,8 @@ function App() {
 
     if(activeUnits.length && currentActivePlayer < 0){
       // Set the next acting player
-      if(next !== undefined){
+      const next = activeUnits.find(a => a < 5) | -1
+      if(next >= 0){
         console.log('Set the next acting player ', activeUnits)
         const unit = store.getState().game.units[next]
         // Update unit state only when the action value is empty
@@ -799,7 +814,12 @@ function App() {
   // #region ATB
   const onAtbBarFinished = (unit, index) => {
     if(activeUnits.find(a => a === index) !== undefined) return
-    setActiveUnit((prevState) => [...prevState, index])
+
+    const copy = JSON.parse(JSON.stringify(activeUnits))
+    copy.push(index)
+    dispatch(
+      setActiveUnits(copy)
+    )
     const unitData = store.getState().game.units[index]
 
     if(unitData.action === 'defense') dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
@@ -877,12 +897,9 @@ function App() {
         activeUnits={activeUnits} 
         notifyParent={onAtbBarFinished} 
         ref={atbRef}
-        pause={timerToAct}
       />
 
-      <UnitArrow 
-        currentActivePlayer={currentActivePlayer}
-        pointedTarget={pointedTarget}
+      <UnitArrow
         position={position}
         skillRef={skillRef.current}
         itemRef={itemRef.current}

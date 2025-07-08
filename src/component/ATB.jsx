@@ -1,4 +1,4 @@
-import { useRef, useMemo, useEffect, useImperativeHandle } from "react"
+import { useRef, useEffect, useImperativeHandle } from "react"
 import { useSelector } from "react-redux"
 import k from '../lib/kaplay'
 import store from "../store/store"
@@ -21,11 +21,11 @@ export default function ATB({
     activeUnits, 
     notifyParent, 
     ref, // Set witch the unit and index to restart the timer
-    pause, // Pause timers other than one that is running,
 }) {
     const timers = useRef([])
     const gameWidth = useSelector(state => state.setting.width)  
     const stopAll = useSelector(state => state.game.stopAll) 
+    const timerToAct = useSelector(state => state.game.timerToAct)
     // const scale = useSelector(state => state.setting.scale)
 
     const loopConstructor = (index, unit, position, controller=null, callBack=null) => {
@@ -166,13 +166,14 @@ export default function ATB({
     //     else waitConstructor(index, unit, action, callBack)
     // }, [reStart])
 
+    // Pause or resume timer
     useEffect(() => {
-        if(Object.keys(pause).length === 0) return
-        const { index, value } = pause
+        if(Object.keys(timerToAct).length === 0) return
+        const { index, value } = timerToAct
         timers.current.forEach((t) => { 
             if(t.index !== index && t.controller !== undefined) t.controller.paused = value 
         })
-    }, [pause])
+    }, [timerToAct])
 
     useImperativeHandle(ref, () => {
         return { 

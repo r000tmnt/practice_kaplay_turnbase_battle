@@ -30,7 +30,7 @@ const {
     // RED
 } = k
 
-const getAvailableTargets = (target: Unit ,tindex: number, start: number, end: number) => {
+const getAvailableTarget = (target: Unit ,tindex: number, start: number, end: number) => {
     // Get latest state
     const units = store.getState().game.units
 
@@ -61,7 +61,7 @@ const getAvailableTargets = (target: Unit ,tindex: number, start: number, end: n
  * @param {number} tindex - The index of the enemy unit in the unitSprites array
  */
 export const attack = async (unit: Unit, target: Unit, uIndex: number, tindex: number) => {
-    const realTarget: Unit | null  = getAvailableTargets(target, tindex, 5, 10)
+    const realTarget: Unit | null  = getAvailableTarget(target, tindex, 5, 10)
 
     if(!realTarget) return
 
@@ -110,7 +110,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
         // Calculate the number or damage
         wait(0.7, () => {
             if(skill.type !== 'Support'){
-                const realTarget: Unit | null = getAvailableTargets(target, tindex, 5, 10)
+                const realTarget: Unit | null = getAvailableTarget(target, tindex, 5, 10)
                 if(!realTarget) return
 
                 const tension = store.getState().game.tension
@@ -171,7 +171,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                 // return showText(unit, dmg, rng, crit, tindex, attribute)    
                 resolve({ unit, number: dmg, crit: rng <= crit, tindex, attribute })
             }else{
-                const realTarget: Unit | null = getAvailableTargets(target, tindex, 0, 5)
+                const realTarget: Unit | null = getAvailableTarget(target, tindex, 0, 5)
                 if(!realTarget) return
 
                 const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
@@ -242,7 +242,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tindex: 
     return new Promise((resolve, reject) => {
         // Calculate the number or damage
         wait(0.7, () => {
-            const realTarget: Unit | null = getAvailableTargets(target, tindex, 0, 5)
+            const realTarget: Unit | null = getAvailableTarget(target, tindex, 0, 5)
             if(!realTarget) return
 
             const inventory = JSON.parse(JSON.stringify(store.getState().game.inventory))
