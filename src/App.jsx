@@ -26,7 +26,7 @@ import ATB from './component/ATB';
 import UnitArrow from './component/UnitArrow';
 import Command from './component/Command';
 
-import { attack, castSkill, isEscapable } from './utils/battle';
+import { attack, castSkill, useItem, isEscapable } from './utils/battle';
 
 const { 
   scene, 
@@ -158,6 +158,7 @@ function App() {
   const next = useMemo(() => activeUnits.length? activeUnits.find(a => a < 5) : -1, [activeUnits])
   const [pointedTarget, setPointedTarget] = useState(-1)
   const skillRef = useRef([])
+  const itemRef = useRef([])
 
   const gameWidth = useSelector(state => state.setting.width)
   const gameHeight = useSelector(state => state.setting.height)
@@ -470,6 +471,8 @@ function App() {
     dispatch(setCurrentActivePlayer(-1))
     spriteRef.current.forEach(s => s?? s.destroy())
     spriteRef.current.splice(0)
+    skillRef.current.splice(0)
+    itemRef.current.splice(0)
   }
 
   const unitLoseHandle = (tindex) => {
@@ -523,7 +526,7 @@ function App() {
    * Change the ui state and enable sprite hover and click events
   */
 
-  const playerAction = (action, unit, skill=null) => {
+  const playerAction = (action, unit, payload=null) => {
     if(unit === undefined) return
 
     dispatch(
@@ -544,15 +547,15 @@ function App() {
         }
         break
       case 'skill': {
-        if(skill){
+        if(payload){
           skillRef.current.push({
             unit,
-            ...skill
+            ...payload
           })
           spriteHoverEvent.paused = false
           spriteClickEvent.paused = false     
           
-          if(skill.type !== 'Support'){ 
+          if(payload.type !== 'Support'){ 
             // Find available target
             for(let i=5; i < 10; i++){
               if(units[i] && units[i].attribute.hp > 0){
@@ -573,7 +576,23 @@ function App() {
       }
         break
       case 'item':
-        // TODO - Display avialable items
+        if(payload){
+          itemRef.current.push({
+            unit,
+            ...payload
+          })
+
+          spriteHoverEvent.paused = false
+          spriteClickEvent.paused = false   
+          
+          // Find available target
+          for(let i=0; i <= 4; i++){
+            if(units[i] && units[i].attribute.hp > 0){
+              setPointedTarget(i)
+              break
+            }
+          }             
+        }
         break
       case 'defense':{
         const input = {
@@ -594,7 +613,7 @@ function App() {
         // TODO - Switch to defense sprite / animation
         break
       case 'change':
-        // TODO - Font line to back, back to front line
+        // TODO - Front line to back, back to front line
         break
       case 'escape':
         isEscapable(unit).then(result => {      
@@ -678,6 +697,19 @@ function App() {
           input.action = function(){ 
             controller(
               () => castSkill(unit, units[target], currentActivePlayer, target, skill),
+              currentActivePlayer
+            ) 
+          }
+        }
+      }
+      break;
+      case 'item': {
+        const item = itemRef.current.find(i => i.unit.name === unit.name)
+        if(item){
+          input.action = function(){ 
+            controller(
+              // eslint-disable-next-line react-hooks/rules-of-hooks
+              () => useItem(unit, units[target], currentActivePlayer, target, item),
               currentActivePlayer
             ) 
           }
