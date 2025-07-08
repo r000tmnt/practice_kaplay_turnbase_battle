@@ -5,7 +5,7 @@ import store from "../store/store"
 
 const { loop } = k
 
-export default function UnitArrow({currentActivePlayer, pointedTarget, position, skillRef}) {
+export default function UnitArrow({currentActivePlayer, pointedTarget, position, skillRef, itemRef}) {
     const gameWidth = useSelector(state => state.setting.width)
     const scale = useSelector(state => state.setting.scale)  
     const [target, setTarget] = useState({})
@@ -50,24 +50,33 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position,
     useEffect(() => {
         if(pointedTarget >=0){
             // If current action is skill
-            if(skillRef.length && currentActivePlayer >= 0){
-                const unit = store.getState().game.units[pointedTarget]
-                for(let i=0; i < skillRef.length; i++){
-                    const skill = skillRef[i]
-                    if(skill.unit.name === unit.name && skill.type === 'support'){
-                        setTarget({
-                            position: 0,
-                            index: pointedTarget
-                        })   
-                        break
-                    }else{
-                        setTarget({
-                            position: 1,
-                            index: pointedTarget
-                        })
-                        break
-                    }
-                }
+            if(skillRef.length){
+                const unit = store.getState().game.units[currentActivePlayer]
+                const skill = skillRef.find(s => s.unit.name === unit.name)
+                if(!skill) return
+
+                if(skill.type === 'support'){
+                    setTarget({
+                        position: 0,
+                        index: pointedTarget
+                    })
+                }else{
+                    setTarget({
+                        position: 1,
+                        index: pointedTarget
+                    })
+                }                
+            }
+            
+            if(itemRef.length){
+                const unit = store.getState().game.units[currentActivePlayer]
+                const item = itemRef.find(item => item.unit.name === unit.name)
+                if(!item) return
+
+                setTarget({
+                    position: 0,
+                    index: pointedTarget
+                })                
             }else{
                 setTarget({
                     position: 1,
@@ -78,12 +87,13 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position,
     }, [pointedTarget])
 
     useEffect(() => {
-        if(currentActivePlayer >= 0){
-            setTarget({
-                position: 0,
-                index: currentActivePlayer
-            })   
-        }else reset()
+        // if(currentActivePlayer >= 0){
+        //     setTarget({
+        //         position: 0,
+        //         index: currentActivePlayer
+        //     })   
+        // }else reset()
+        if(currentActivePlayer < 0) reset()
     }, [currentActivePlayer])
 
     return(

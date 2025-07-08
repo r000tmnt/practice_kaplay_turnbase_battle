@@ -748,6 +748,25 @@ function App() {
         if(target > 4) setPointedTarget(target - 5)
       }
       break;
+      case 'skill':{
+        const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
+        const skill = skillRef.current.find(s => s.unit.name === units.name)
+        if(skill?.type !== 'Support'){
+          if(target > 4) setPointedTarget(target - 5)
+        } 
+        else if(target > 4) setPointedTarget(target - 5)
+        else setPointedTarget(target)
+      }
+      break;
+      case 'item':{
+        const target = Number(unit.tags.find((tag) => tag.includes('index_')).split('_')[1])
+        const item = itemRef.current.find(item => item.unit.name === units.name)
+        if(item){
+          if(target > 4) setPointedTarget(target - 5)
+          else setPointedTarget(target)
+        }
+      }
+      break;
     }
   })
   // Default to paused
@@ -859,6 +878,7 @@ function App() {
         pointedTarget={pointedTarget}
         position={position}
         skillRef={skillRef.current}
+        itemRef={itemRef.current}
       />
 
       <Command 
