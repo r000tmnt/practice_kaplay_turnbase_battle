@@ -5,9 +5,11 @@ import {
     updateUnit,
     setTension,
     setCurrentCastingSkill,
-    updateEffectTurnCounter
+    updateEffectTurnCounter,
+    setInventory
 } from "../store/game";
 import k from '../lib/kaplay'
+import { Item } from "../model/item";
 
 const { 
     // add,
@@ -53,7 +55,7 @@ const getAvailableTargets = (target: Unit ,tindex: number, start: number, end: n
 
 /**
  * Attack function
- * @param {Unit} unit - Who performs the attack
+ * @param {Unit} unit - Who is going to attack
  * @param {Unit} target - Who takes damage 
  * @param {number} uindex - The index of the player unit in the unitSprites array
  * @param {number} tindex - The index of the enemy unit in the unitSprites array
@@ -92,7 +94,7 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tindex: n
   
 /**
  * Skill function
- * @param {Unit} unit - Who performs the attack
+ * @param {Unit} unit - Who is going to cast thes kill
  * @param {Unit} target - Who takes damage 
  * @param {number} uindex - The index of the player unit in the unitSprites array
  * @param {number} tindex - The index of the enemy unit in the unitSprites array
@@ -188,7 +190,6 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                 let number = 0
 
                 if(skill.attribute.buff){
-                    //...
                     Object.entries(skill.attribute.buff).forEach((param) => {
                         if(param[0] !== 'turn'){
                             attribute[param[0]] += Math.round(attribute[param[0]] * param[1])
@@ -200,11 +201,12 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                             if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
                         }
                     })
-
+                    store.dispatch(
+                        updateEffectTurnCounter(effectTurnCounter)
+                    )
                 }
 
                 if(skill.attribute.debuff){
-                    //...
                     Object.entries(skill.attribute.debuff).forEach((param) => {
                         if(param[0] !== 'turn'){
                             attribute[param[0]] -= Math.round(attribute[param[0]] * param[1])
@@ -215,7 +217,10 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                             // Store the number of turns
                             if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
                         }
-                    })            
+                    })     
+                    store.dispatch(
+                        updateEffectTurnCounter(effectTurnCounter)
+                    )                           
                 }
 
                 store.dispatch(
@@ -228,6 +233,81 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
     })
 }
 
+export const useItem = async (unit: Unit, target: Unit, uIndex: number, tindex: number, item: Item) => {
+    // Display item name
+    store.dispatch(
+        setCurrentCastingSkill(item.name)
+    )
+
+    return new Promise((resolve, reject) => {
+        // Calculate the number or damage
+        wait(0.7, () => {
+            const realTarget: Unit | null = getAvailableTargets(target, tindex, 0, 5)
+            if(!realTarget) return
+
+            const inventory = JSON.parse(JSON.stringify(store.getState().game.inventory))
+
+            const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
+
+            const tension = store.getState().game.tension
+
+            const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
+
+            let number = 0
+
+            // Get effected attributes
+            Object.entries(item.effect).forEach(param=> {
+                switch(param[0]){
+                    case 'turn':
+                        // Store the number of turns
+                        if(param[1] > 0){
+                            effectTurnCounter.push({ unit: realTarget, turn: param[1] })     
+                            store.dispatch(
+                                updateEffectTurnCounter(effectTurnCounter)
+                            )                               
+                        }                                               
+                    break;
+                    case 'tension':
+                        store.dispatch(
+                            setTension({ current: tension.current + param[1] })
+                        )                        
+                    break;
+                    default:
+                        attribute[param[0]] += param[1]
+                        number = attribute[param[0]]
+                    break;
+                }
+            })
+
+            // Update items
+            for(let i=0; i < inventory.length; i++){
+                if(inventory[i].id === item.id){
+                    inventory[i].amount -= 1
+                    if(inventory[i].amount == 0){
+                        inventory.splice(i, 1)
+                    }
+                    break   
+                }
+            }
+
+            store.dispatch(
+                setInventory(inventory)
+            )      
+
+            store.dispatch(
+                updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
+            )
+
+            if(number > 0) resolve({ unit, number, crit: false, tindex, attribute })                
+        })        
+    })
+}
+
+/**
+ * Escape function
+ * @param {Unit} unit - Who is gonna escape
+ * @returns 
+ */
 export const isEscapable = async(unit: Unit) => {
     const posibility = (unit.attribute.luck + Math.round(unit.attribute.spd * (unit.attribute.luck / 100))) * 10
 
