@@ -1,6 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { Unit, Position } from "../model/unit";
-// import { Item } from "../model/item";
+import { Unit } from "../model/unit";
 
 const gameSlice = createSlice({
     name: 'game',
@@ -50,7 +49,7 @@ const gameSlice = createSlice({
             }else console.log('unit destroyed', name)
         },
         setActiveUnits: (state, action) => {
-            state.activeUnits = action.payload
+            state.activeUnits = action.payload        
         },
         setTimerToAct: (state, action) => {
             state.timerToAct = action.payload
