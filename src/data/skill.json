@@ -12,8 +12,8 @@
                 "min": 1,
                 "max": 10
             },
-            "buff": {},
-            "debuff": {}
+            "buff": null,
+            "debuff": null
         }
     },
     {
@@ -29,8 +29,8 @@
                 "min": 3,
                 "max": 20
             },
-            "buff": {},
-            "debuff": {}
+            "buff": null,
+            "debuff": null
         }
     },
     {
@@ -46,8 +46,8 @@
                 "min": 1,
                 "max": 10
             },
-            "buff": {},
-            "debuff": {}
+            "buff": null,
+            "debuff": null
         }
     },
     {
@@ -63,8 +63,8 @@
                 "min": 5,
                 "max": 30
             },
-            "buff": {},
-            "debuff": {}
+            "buff": null,
+            "debuff": null
         }
     },
     {
