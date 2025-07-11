@@ -2,12 +2,15 @@ import { useState, useEffect, useRef } from "react"
 import { useSelector } from "react-redux"
 import k from '../lib/kaplay'
 import store from "../store/store"
+import { positionRef, itemRef, skillRef } from "../scene/game"
 
 const { loop } = k
 
-export default function UnitArrow({currentActivePlayer, pointedTarget, position, skillRef, itemRef}) {
+export default function UnitArrow() {
     const gameWidth = useSelector(state => state.setting.width)
     const scale = useSelector(state => state.setting.scale)  
+    const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
+    const pointedTarget = useSelector(state => state.game.pointedTarget)
     const [target, setTarget] = useState({})
     const animation = useRef({})
     
@@ -109,8 +112,8 @@ export default function UnitArrow({currentActivePlayer, pointedTarget, position,
                     left: `${((window.innerWidth - (gameWidth * scale)) / 2)}px`,            
                     transform: `
                         translate(
-                            ${(position[target.position][target.index].pos.x + ((gameWidth * 0.05)/4)) * scale}px, 
-                            ${(position[target.position][target.index].pos.y - (128 / 2) - 40) * scale}px)
+                            ${(positionRef[target.position][target.index].pos.x + ((gameWidth * 0.05)/4)) * scale}px, 
+                            ${(positionRef[target.position][target.index].pos.y - (128 / 2) - 40) * scale}px)
                     `,
                 }}>&#11167;</div>
                 : null

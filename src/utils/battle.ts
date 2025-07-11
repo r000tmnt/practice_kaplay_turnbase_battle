@@ -1,36 +1,230 @@
 import { Unit } from "../model/unit";
-import { Skill } from "../model/skill";
+import { Skill, SkillRef } from "../model/skill";
 import store from "../store/store";
 import { 
     updateUnit,
     setTension,
     setCurrentCastingSkill,
     updateEffectTurnCounter,
-    setInventory
+    setInventory,
+    setActiveUnits,
+    setWave,
+    setAllToStop,
 } from "../store/game";
 import k from '../lib/kaplay'
-import { Item } from "../model/item";
+import { Item, ItemRef } from "../model/item";
+import { positionRef, spriteRef } from "../scene/game";
+import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./ATB";
+
+import skill from '../data/skill.json'
+import item from '../data/items.json'
+
+import { skillRef } from "../scene/game";
 
 const { 
-    // add,
+    add,
     wait, 
     // loop, 
     // rect,
-    // pos,
-    // text,
-    // opacity,
-    // vec2,
-    // outline,
-    // easings,
-    // tween,
-    // color,
-    // BLACK,
-    // YELLOW,
-    // WHITE,
+    pos,
+    text,
+    opacity,
+    vec2,
+    outline,
+    easings,
+    tween,
+    color,
+    BLACK,
+    YELLOW,
+    WHITE,
     // RED
 } = k
 
-const getAvailableTargets = (target: Unit ,tindex: number, start: number, end: number) => {
+// #region Shared actions
+export const controller = (actionFunction: Function, index: number, actionCallBack = null as Function | null) => {
+    // Pause timers of the other units
+    pauseOrResume({ index, value: true })
+
+    actionFunction().then((result) => {
+        if(result !== undefined) {
+        showText(result)
+        }
+
+        if(actionCallBack) actionCallBack()
+        // Resume timers of the other units
+        pauseOrResume({ index, value: false })
+    })
+}
+
+const showText = ({unit, number, crit, tindex, attribute}) => {
+if(!spriteRef[tindex]) return
+// Create text
+const resultText = add([
+    text(number, { size: crit? 48 : 36 }),
+    pos(spriteRef[tindex].pos.x + (128 / 2), spriteRef[tindex].pos.y - 10),
+    opacity(1),
+    color(crit? YELLOW : WHITE),
+    outline(1, BLACK)
+])
+
+// Animate the text
+tween(
+    resultText.pos, 
+    vec2(resultText.pos.x, resultText.pos.y - 50), 
+    0.5,
+    (pos) => resultText.pos = pos,
+    easings.easeInOutQuad
+).onEnd(() => {
+    resultText.destroy()
+
+    if(unit.action === 'attack') {
+        if(attribute.hp === 0) {
+            unitLoseHandle(tindex)
+        }else{
+            store.dispatch(
+                setTension({ current: 1 })
+            )
+        }        
+    }
+
+    if(unit.action === 'skill') {
+    const skill = skillRef.find(s => s.unit.name === unit.name)
+    if(skill?.type !== 'Support'){
+        if(attribute.hp === 0) {
+            unitLoseHandle(tindex)
+            removeBar(tindex)
+        }else{
+            store.dispatch(
+                setTension({ current: 1 })
+            )
+        }    
+    }
+    }
+})
+}
+
+const unitLoseHandle = (tindex: number) => {
+    // TODO - Unit lose animation
+    store.dispatch(
+        setTension({ current: 5 })
+    )
+
+    // Get the latest state
+    const wave = store.getState().game.wave
+    const units = store.getState().game.units
+    tween(
+        spriteRef[tindex].opacity, 
+        0, 
+        0.5,
+        (o) => spriteRef[tindex].opacity = o, 
+        easings.linear
+    ).onEnd(() => {
+        // Remove sprite
+        spriteRef[tindex].destroy()
+
+        // Remove the atb bar of the unit
+        removeBar(tindex)
+
+        // TODO - If no more enemy in the scene
+        let remain = 0
+        // TODO - Need to set the starting number as the length of players
+        for(let i=5; i < units.length; i++){
+        // In case if the state is not update yet
+        if(units[i].attribute.hp > 0 && i !== tindex) remain += 1
+        }
+
+        if(!remain){
+            store.dispatch(setAllToStop(true))
+            // initGame.stopAllUnit()
+            wait(0.3, () => {
+                if(wave.current !== wave.max){
+                    console.log('next wave?')
+                    store.dispatch(setWave(1))
+                }else{
+                    // TODO - End of the battle
+                }        
+            })
+        }
+
+        console.log('remaing', remain)      
+    })
+}
+// endregion
+
+// #region Enemy AI
+export const enemyAI = (unit, index) => {
+    const actions = [ 'attack', 'skill', 'defense', 'escape' ]
+                
+    const rng = Math.random() * actions.length
+
+    const action = actions[Math.floor(rng)]
+
+    const input = {
+        action: () => {},
+        callback: () => {
+            console.log(unit.name, 'callback loop')
+            const unitData = store.getState().game.units[index]
+            if(unitData.attribute.hp > 0){
+                loopConstructor(index, unit, positionRef, null, null)
+            }
+        }
+    }
+
+    // Keep tracking action
+    store.dispatch(
+        updateUnit({ name: unit.name, attribute: unit.attribute, action })
+    )
+
+    // TODO - Call the action
+    switch (action) {
+        case 'attack':{
+            // Choose a player
+            const target = Math.round(Math.random() * 4)
+            const units = store.getState().game.units
+            input.action = function(){ controller(() => attack(unit, units[target], index, target), index ) } 
+        }
+        break
+        case 'skill':{
+            const skillList = unit.skill.map((s: number) => skill[s])
+            const units = store.getState().game.units
+            // Picking skill
+            const skillToCast = skillList[Math.floor(Math.random() * (skillList.length - 1))]
+            let target = 0
+            // Picking target
+            if(skillToCast.type === 'support')
+                target = Math.round(Math.random() * 4) + 5
+            else
+                target = Math.round(Math.random() * 4)
+
+            input.action = function(){ controller(async() => castSkill(unit, units[target], index, target, skillToCast), index ) } 
+        }
+        break
+        // case 'item':
+        //   input.action = function(){ controller(async() => { console.log('Enemy item')}, index ) } 
+        //   break
+        case 'defense':
+            input.action = function(){ controller(async() => { console.log('Enemy defense')}, index ) } 
+        break
+        // case 'change':
+        //   input.action = function(){ controller(async() => { console.log('Enemy change')}, index ) } 
+        //   break
+        case 'escape':
+            input.action = function(){ controller(async() => { console.log('Enemy escape')}, index ) } 
+        break
+    }
+
+    const copy = JSON.parse(JSON.stringify(
+        store.getState().game.activeUnits
+    ))
+    store.dispatch(
+        setActiveUnits(copy.filter((a: number) => a !== index))
+    )
+
+    waitConstructor(index, unit, input.action, input.callback)
+}
+// #endregion
+
+const getAvailableTarget = (target: Unit ,tindex: number, start: number, end: number) => {
     // Get latest state
     const units = store.getState().game.units
 
@@ -61,7 +255,7 @@ const getAvailableTargets = (target: Unit ,tindex: number, start: number, end: n
  * @param {number} tindex - The index of the enemy unit in the unitSprites array
  */
 export const attack = async (unit: Unit, target: Unit, uIndex: number, tindex: number) => {
-    const realTarget: Unit | null  = getAvailableTargets(target, tindex, 5, 10)
+    const realTarget: Unit | null  = getAvailableTarget(target, tindex, 5, 10)
 
     if(!realTarget) return
 
@@ -110,7 +304,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
         // Calculate the number or damage
         wait(0.7, () => {
             if(skill.type !== 'Support'){
-                const realTarget: Unit | null = getAvailableTargets(target, tindex, 5, 10)
+                const realTarget: Unit | null = getAvailableTarget(target, tindex, 5, 10)
                 if(!realTarget) return
 
                 const tension = store.getState().game.tension
@@ -171,10 +365,14 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                 // return showText(unit, dmg, rng, crit, tindex, attribute)    
                 resolve({ unit, number: dmg, crit: rng <= crit, tindex, attribute })
             }else{
-                const realTarget: Unit | null = getAvailableTargets(target, tindex, 0, 5)
+                const realTarget: Unit | null = getAvailableTarget(target, tindex, 0, 5)
                 if(!realTarget) return
 
+                // Copy assigned effects
                 const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
+
+                // Effects collector
+                const newEffects : {unit: Unit, turn: number}[] = []
 
                 const tension = store.getState().game.tension
 
@@ -198,12 +396,9 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                             }                    
                         }else{
                             // Store the number of turns
-                            if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
+                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: param[1] })
                         }
                     })
-                    store.dispatch(
-                        updateEffectTurnCounter(effectTurnCounter)
-                    )
                 }
 
                 if(skill.attribute.debuff){
@@ -215,13 +410,15 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                             }                    
                         }else{
                             // Store the number of turns
-                            if(param[1] > 0) effectTurnCounter.push({ unit: realTarget, turn: param[1] })
+                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: param[1] })
                         }
-                    })     
-                    store.dispatch(
-                        updateEffectTurnCounter(effectTurnCounter)
-                    )                           
+                    })                       
                 }
+
+                // Combine with the old one
+                store.dispatch(
+                    updateEffectTurnCounter([...effectTurnCounter, ...newEffects])
+                )                         
 
                 store.dispatch(
                     updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
@@ -242,7 +439,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tindex: 
     return new Promise((resolve, reject) => {
         // Calculate the number or damage
         wait(0.7, () => {
-            const realTarget: Unit | null = getAvailableTargets(target, tindex, 0, 5)
+            const realTarget: Unit | null = getAvailableTarget(target, tindex, 0, 5)
             if(!realTarget) return
 
             const inventory = JSON.parse(JSON.stringify(store.getState().game.inventory))

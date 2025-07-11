@@ -1,6 +1,5 @@
 import { createSlice } from "@reduxjs/toolkit";
-import { Unit, Position } from "../model/unit";
-// import { Item } from "../model/item";
+import { Unit } from "../model/unit";
 
 const gameSlice = createSlice({
     name: 'game',
@@ -15,9 +14,12 @@ const gameSlice = createSlice({
         },
         turn: 0,
         units: [] as Unit[],
+        pointedTarget: -1,
         currentActivePlayer: -1,
+        activeUnits: [] as number[],
+        timerToAct: {} as { index: number, value: boolean },
         currentCastingSkill: '',
-        effectTurnCounter: [] as {unit: Unit, turn: number}[],
+        effectTurnCounter: [] as {unit: Unit, turn: number}[], 
         inventory: [
             { id: 1, amount: 5 },
             { id: 2, amount: 5 },
@@ -46,6 +48,12 @@ const gameSlice = createSlice({
                 })
             }else console.log('unit destroyed', name)
         },
+        setActiveUnits: (state, action) => {
+            state.activeUnits = action.payload        
+        },
+        setTimerToAct: (state, action) => {
+            state.timerToAct = action.payload
+        },        
         setWave: (state, action) => {
             state.wave.current += action.payload
         },
@@ -55,6 +63,9 @@ const gameSlice = createSlice({
 
             if(action.payload.max)
                 state.tension.max += action.payload.max            
+        },
+        setPointedTarget: (state, action) => {
+            state.pointedTarget = action.payload
         },
         setCurrentActivePlayer: (state, action) => {
             state.currentActivePlayer = action.payload
@@ -77,6 +88,7 @@ const gameSlice = createSlice({
 export const { 
     setUnits, updateUnit, setWave, 
     setTension, setCurrentActivePlayer, setCurrentCastingSkill, 
-    updateEffectTurnCounter, setAllToStop, setInventory
+    updateEffectTurnCounter, setAllToStop, setInventory,
+    setPointedTarget, setTimerToAct, setActiveUnits,
 } = gameSlice.actions
 export default gameSlice.reducer
