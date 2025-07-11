@@ -1,3 +1,5 @@
+import { Unit } from "./unit"
+
 type AllowedAttributes = 'hp' | 'mp' | 'inFight' | 'gunFight' | 'spd' | 'def' | 'luck' | 'act' | 'cast' | 'will' | 'tension' | 'turn'
 
 interface Item {
@@ -10,4 +12,8 @@ interface Item {
     effect: Record<AllowedAttributes, number>,
 }
 
-export { Item }
+interface ItemRef extends Item{
+    unit: Unit
+}
+
+export { Item, ItemRef }
