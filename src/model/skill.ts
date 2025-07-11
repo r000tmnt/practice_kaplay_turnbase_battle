@@ -1,3 +1,5 @@
+import { Unit } from "./unit";
+
 type AllowedAttributes = 'hp' | 'mp' | 'inFight' | 'gunFight' | 'spd' | 'def' | 'luck' | 'act' | 'cast' | 'will' | 'tension' | 'turn';
 
 interface Skill {
@@ -10,7 +12,10 @@ interface Skill {
         buff: Record<AllowedAttributes, number> | null,
         debuff: Record<AllowedAttributes, number> | null,
     },
-
 }
 
-export { Skill }
+interface SkillRef extends Skill{
+    unit: Unit
+}
+
+export { Skill, SkillRef }
