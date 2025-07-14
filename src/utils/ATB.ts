@@ -190,13 +190,11 @@ const onAtbBarFinished = (unit : Unit, index: number) => {
     const ei = effectTurnCounter.findIndex(e => e.unit.name === unit.name)
 
     if(ei >= 0){
-        if(effectTurnCounter[ei].turn > 1){
-        effectTurnCounter[ei].turn -= 1
-        store.dispatch(updateEffectTurnCounter(effectTurnCounter))
-        }else{
-        // Remove counter
-        effectTurnCounter.splice(ei, 1)
-        store.dispatch(updateEffectTurnCounter(effectTurnCounter))
+        const turn = store.getState().game.turn
+        if(effectTurnCounter[ei].turn === turn){
+            // Remove counter
+            effectTurnCounter.splice(ei, 1)
+            store.dispatch(updateEffectTurnCounter(effectTurnCounter))
         }
     }
 
