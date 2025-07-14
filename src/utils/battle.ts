@@ -10,7 +10,8 @@ import {
     setActiveUnits,
     setWave,
     setAllToStop,
-    setInactiveUnits
+    setInactiveUnits,
+    setUnits
 } from "../store/game";
 import k from '../lib/kaplay'
 import { Item, ItemRef } from "../model/item";
@@ -20,7 +21,7 @@ import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./AT
 import skill from '../data/skill.json'
 import item from '../data/items.json'
 
-import { skillRef } from "../scene/game";
+import { skillRef, changeSpritePosition } from "../scene/game";
 
 const { 
     add,
@@ -528,4 +529,20 @@ export const isEscapable = async(unit: Unit) => {
     console.log('rng: ', random)
 
     return random <= posibility
+}
+
+export const changeUnitOrder = async() => {
+    const units = JSON.parse(JSON.stringify(store.getState().game.units))
+    const frontLine = units.filter((u, i) => i < 2)
+    const backLine = units.filter((u, i) => i > 1 && i < 5)
+
+    const newOrder = backLine.concat(frontLine).concat(
+        units.splice(5, 5)
+    )
+
+    store.dispatch(
+        setUnits(newOrder)
+    )
+
+    return changeSpritePosition()
 }

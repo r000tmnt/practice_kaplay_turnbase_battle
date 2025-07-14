@@ -44,8 +44,9 @@ const {
     opacity,
     // rotate,
     // animate,
-    // tween,
-    // easings,
+    tween,
+    vec2,
+    easings,
     // BLACK,
     // WHITE,
     // RED,
@@ -147,6 +148,57 @@ const drawCharacters = (wave: { current: number, max: number }) => {
   })
 }      
 // endregion
+
+export const changeSpritePosition = async() => {
+  const frontLine = spriteRef.filter((u, i) => i < 2)
+  const backLine = spriteRef.filter((u, i) => i > 1 && i < 5)
+
+  try {
+    frontLine.forEach((s, i) => {
+      const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
+      const newIndex = oldIndex + frontLine.length
+
+      // Remove & add tag
+      s.untag(`index_${oldIndex}`)
+      s.tag(`index_${newIndex}`)
+
+      const { x, y } = positionRef[0][newIndex].pos
+
+      // Move sprite
+      tween(
+        s.pos,
+        vec2(x - (128 / 2), y - (128 + 20)),
+        0.5,
+        (pos) => s.pos = pos,
+        easings.easeInOutQuad
+      )
+    })
+
+    backLine.forEach((s, i) => {
+      const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
+      const newIndex = oldIndex - backLine.length
+
+      // Remove & add tag
+      s.untag(`index_${oldIndex}`)
+      s.tag(`index_${newIndex}`)
+
+      const { x, y } = positionRef[0][newIndex].pos
+
+      // Move sprite
+      tween(
+        s.pos,
+        vec2(x - (128 / 2), y - (128 + 20)),
+        0.5,
+        (pos) => s.pos = pos,
+        easings.easeInOutQuad
+      )    
+    })      
+    return true
+  } catch (error) {
+    console.log('Error occured while changing sprite position ' + error)
+    return false
+  }
+}
 
 // region Wave transition
 export const waveTransition = (gameWidth, gameHeight) => {
