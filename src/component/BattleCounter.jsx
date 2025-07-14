@@ -1,4 +1,5 @@
-import { useSelector } from "react-redux"
+import { useSelector, useDispatch } from "react-redux"
+import { setTurn, setInactiveUnits } from '../store/game'
 import { useEffect, useRef } from "react"
 import k from "../lib/kaplay"
 
@@ -10,9 +11,12 @@ export default function BattleCounter() {
     const tension = useSelector(state => state.game.tension)
     const gameWidth = useSelector(state => state.setting.width)
     const skillName = useSelector(state => state.game.currentCastingSkill)
+    const inactiveUnits = useSelector(state => state.game.inactiveUnits)
+    const units = useSelector(state => state.game.units)
     // const scale = useSelector(state => state.setting.scale)
     const wrapperRef = useRef(null)
     const labelRef = useRef(null)
+    const dispatch = useDispatch()
     
     // Trigger element fade in & fade out
     useEffect(() => {
@@ -26,13 +30,22 @@ export default function BattleCounter() {
 
     // Hide the counters on transition
     useEffect(() => {
-        if(wave > 1){
+        if(wave.current > 1){
             wrapperRef.current.style.opacity = 0
             wait(3, () => {
                 wrapperRef.current.style.opacity = 1
             })
         }
     }, [wave])
+
+    useEffect(() => {
+        // TODO - If reached a turn
+        const activatingUnits = units.filter(u => u.attribute.hp > 0)
+        if(activatingUnits.length && inactiveUnits.length >= activatingUnits.length){
+            dispatch(setTurn(turn + 1))
+            dispatch(setInactiveUnits([]))
+        }
+    }, [inactiveUnits])
 
     return (
         <div ref={($el) => wrapperRef.current = $el}>
