@@ -167,7 +167,7 @@ export default function Command() {
         const input = {
           action: function(){ 
             controller(
-              () => { console.log('player defense') },
+              async() => { console.log('player defense') },
               currentActivePlayer
             ) 
           },
