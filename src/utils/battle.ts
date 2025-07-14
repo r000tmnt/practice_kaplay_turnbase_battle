@@ -10,6 +10,7 @@ import {
     setActiveUnits,
     setWave,
     setAllToStop,
+    setInactiveUnits
 } from "../store/game";
 import k from '../lib/kaplay'
 import { Item, ItemRef } from "../model/item";
@@ -47,60 +48,71 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
 
     actionFunction().then((result) => {
         if(result !== undefined) {
-        showText(result)
+            showText(result)
         }
 
         if(actionCallBack) actionCallBack()
+        
+        // Tracking actived unit count
+        const inactiveUnits = JSON.parse(JSON.stringify(store.getState().game.inactiveUnits))
+
+        if(!inactiveUnits.length || !inactiveUnits.find((i: number) => i === index)){
+            inactiveUnits.push(index)
+            store.dispatch(
+                setInactiveUnits(inactiveUnits)
+            )
+        }
+
         // Resume timers of the other units
         pauseOrResume({ index, value: false })
     })
 }
 
 const showText = ({unit, number, crit, tindex, attribute}) => {
-if(!spriteRef[tindex]) return
-// Create text
-const resultText = add([
-    text(number, { size: crit? 48 : 36 }),
-    pos(spriteRef[tindex].pos.x + (128 / 2), spriteRef[tindex].pos.y - 10),
-    opacity(1),
-    color(crit? YELLOW : WHITE),
-    outline(1, BLACK)
-])
+    if(!spriteRef[tindex]) return
+    // Create text
+    const resultText = add([
+        text(number, { size: crit? 48 : 36 }),
+        pos(spriteRef[tindex].pos.x + (128 / 2), spriteRef[tindex].pos.y - 10),
+        opacity(1),
+        color(crit? YELLOW : WHITE),
+        outline(1, BLACK)
+    ])
 
-// Animate the text
-tween(
-    resultText.pos, 
-    vec2(resultText.pos.x, resultText.pos.y - 50), 
-    0.5,
-    (pos) => resultText.pos = pos,
-    easings.easeInOutQuad
-).onEnd(() => {
-    resultText.destroy()
+    // Animate the text
+    tween(
+        resultText.pos, 
+        vec2(resultText.pos.x, resultText.pos.y - 50), 
+        0.5,
+        (pos) => resultText.pos = pos,
+        easings.easeInOutQuad
+    ).onEnd(() => {
+        resultText.destroy()
 
-    if(unit.action === 'attack') {
-        if(attribute.hp === 0) {
-            unitLoseHandle(tindex)
-        }else{
-            store.dispatch(
-                setTension({ current: 1 })
-            )
-        }        
-    }
+        if(unit.action === 'attack') {
+            if(attribute.hp === 0) {
+                unitLoseHandle(tindex)
+            }else{
+                store.dispatch(
+                    setTension({ current: 1 })
+                )
+            }        
+        }
 
-    if(unit.action === 'skill') {
-    const skill = skillRef.find(s => s.unit.name === unit.name)
-    if(skill?.type !== 'Support'){
-        if(attribute.hp === 0) {
-            unitLoseHandle(tindex)
-            removeBar(tindex)
-        }else{
-            store.dispatch(
-                setTension({ current: 1 })
-            )
-        }    
-    }
-    }
-})
+        if(unit.action === 'skill') {
+        const skill = skillRef.find(s => s.unit.name === unit.name)
+        if(skill?.type !== 'Support'){
+            if(attribute.hp === 0) {
+                unitLoseHandle(tindex)
+                removeBar(tindex)
+            }else{
+                store.dispatch(
+                    setTension({ current: 1 })
+                )
+            }    
+        }
+        }
+    })
 }
 
 const unitLoseHandle = (tindex: number) => {
@@ -388,6 +400,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                 let number = 0
 
                 if(skill.attribute.buff){
+                    const turn = store.getState().game.turn
                     Object.entries(skill.attribute.buff).forEach((param) => {
                         if(param[0] !== 'turn'){
                             attribute[param[0]] += Math.round(attribute[param[0]] * param[1])
@@ -396,12 +409,13 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                             }                    
                         }else{
                             // Store the number of turns
-                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: param[1] })
+                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: turn + param[1] })
                         }
                     })
                 }
 
                 if(skill.attribute.debuff){
+                    const turn = store.getState().game.turn
                     Object.entries(skill.attribute.debuff).forEach((param) => {
                         if(param[0] !== 'turn'){
                             attribute[param[0]] -= Math.round(attribute[param[0]] * param[1])
@@ -410,7 +424,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                             }                    
                         }else{
                             // Store the number of turns
-                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: param[1] })
+                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: turn + param[1]})
                         }
                     })                       
                 }
