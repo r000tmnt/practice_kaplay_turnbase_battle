@@ -15,7 +15,7 @@ import {
 } from "../store/game";
 import k from '../lib/kaplay'
 import { Item, ItemRef } from "../model/item";
-import { positionRef, spriteRef } from "../scene/game";
+import { positionRef, spriteRef, playerPositionRef } from "../scene/game";
 import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./ATB";
 
 import skill from '../data/skill.json'
@@ -48,7 +48,7 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
     pauseOrResume({ index, value: true })
 
     actionFunction().then((result) => {
-        if(result !== undefined) {
+        if(typeof result === "object") {
             showText(result)
         }
 
@@ -90,29 +90,14 @@ const showText = ({unit, number, crit, tindex, attribute}) => {
     ).onEnd(() => {
         resultText.destroy()
 
-        if(unit.action === 'attack') {
-            if(attribute.hp === 0) {
-                unitLoseHandle(tindex)
-            }else{
-                store.dispatch(
-                    setTension({ current: 1 })
-                )
-            }        
-        }
-
-        if(unit.action === 'skill') {
-        const skill = skillRef.find(s => s.unit.name === unit.name)
-        if(skill?.type !== 'Support'){
-            if(attribute.hp === 0) {
-                unitLoseHandle(tindex)
-                removeBar(tindex)
-            }else{
-                store.dispatch(
-                    setTension({ current: 1 })
-                )
-            }    
-        }
-        }
+        if(attribute.hp === 0) {
+            unitLoseHandle(tindex)
+            removeBar(tindex)
+        }else{
+            store.dispatch(
+                setTension({ current: 1 })
+            )
+        }        
     })
 }
 
@@ -123,8 +108,14 @@ const unitLoseHandle = (tindex: number) => {
     )
 
     // Get the latest state
+    const activeUnits = store.getState().game.activeUnits
     const wave = store.getState().game.wave
     const units = store.getState().game.units
+
+    store.dispatch(
+        setActiveUnits(activeUnits.filter(a => a !== tindex))
+    )
+
     tween(
         spriteRef[tindex].opacity, 
         0, 
@@ -532,9 +523,16 @@ export const isEscapable = async(unit: Unit) => {
 }
 
 export const changeUnitOrder = async() => {
+    const activeUnits = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
     const units = JSON.parse(JSON.stringify(store.getState().game.units))
-    const frontLine = units.filter((u, i) => i < 2)
-    const backLine = units.filter((u, i) => i > 1 && i < 5)
+    const frontLine: Unit[] = []
+    playerPositionRef.filter((p, i) => {
+        if(p[0] === 0.7) frontLine.push(units[i])
+    })
+    const backLine: Unit[] = []
+    playerPositionRef.filter((p, i) => {
+        if(p[0] === 0.8) backLine.push(units[i])
+    })
 
     const newOrder = backLine.concat(frontLine).concat(
         units.splice(5, 5)
@@ -542,6 +540,16 @@ export const changeUnitOrder = async() => {
 
     store.dispatch(
         setUnits(newOrder)
+    )
+
+    // Alter active index
+    activeUnits.forEach((a: number) => {
+        if(a < frontLine.length) a += frontLine.length
+        if(a > frontLine.length) a -= backLine.length
+    });
+
+    store.dispatch(
+        setActiveUnits(activeUnits)
     )
 
     return changeSpritePosition()

@@ -10,9 +10,9 @@ import {
 } from '../store/game'
 import { 
   controller, attack, castSkill, 
-  useItem, isEscapable
+  useItem, isEscapable, changeUnitOrder
 } from "../utils/battle"
-import { loopConstructor, waitConstructor } from "../utils/ATB"
+import { loopConstructor, waitConstructor, pauseOrResume } from "../utils/ATB"
 import { 
   skillRef, itemRef, positionRef,
   spriteRef
@@ -24,80 +24,92 @@ const {
 } = k
 
 export default function Command() {
-    const units = useSelector(state => state.game.units)
-    const gameWidth = useSelector(state => state.setting.width)
-    const inventory = useSelector(state => state.game.inventory)
-    const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
-    const activeUnits = useSelector(state => state.game.activeUnits)
-    const [showCancel, setShowCancel] = useState(false)
-    const [skillList, setSkillList] = useState([])
-    const [itemList, setItemList] = useState([])
-    const dispatch = useDispatch()
+  const units = useSelector(state => state.game.units)
+  const gameWidth = useSelector(state => state.setting.width)
+  const inventory = useSelector(state => state.game.inventory)
+  const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
+  const activeUnits = useSelector(state => state.game.activeUnits)
+  const [showCancel, setShowCancel] = useState(false)
+  const [skillList, setSkillList] = useState([])
+  const [itemList, setItemList] = useState([])
+  const dispatch = useDispatch()
 
-    const setAction = (action) => {
-      const unit = units[currentActivePlayer]
+  const setAction = (action) => {
+    const unit = units[currentActivePlayer]
 
-      dispatch(
-        updateUnit({ name: unit.name, attribute: unit.attribute, action })
-      )
+    dispatch(
+      updateUnit({ name: unit.name, attribute: unit.attribute, action })
+    )
 
-      switch(action){
-        case 'attack':
-          setShowCancel(true)
-          playerAction(action, units[currentActivePlayer])
-        break;
-        case 'skill':
-          units[currentActivePlayer].skill.forEach(s => {
-            setSkillList(prev => {
-              return [...prev, skills[s]]
-            });
+    switch(action){
+      case 'attack':
+        setShowCancel(true)
+        playerAction(action, units[currentActivePlayer])
+      break;
+      case 'skill':
+        units[currentActivePlayer].skill.forEach(s => {
+          setSkillList(prev => {
+            return [...prev, skills[s]]
           });
-        break;
-        case 'item':
-          inventory.forEach(item => {
-            for(let i=0; i < item.amount; i++){
-              const data = items.find(d => d.id === item.id)
-              if(data.stackable){
-                data.amount = item.amount
-              }else{
-                data.amount = 1
-              }
-              
-              setItemList(prev => {
-                return [...prev, data]
-              })
-  
-              if(data.stackable) break
+        });
+      break;
+      case 'item':
+        inventory.forEach(item => {
+          for(let i=0; i < item.amount; i++){
+            const data = items.find(d => d.id === item.id)
+            if(data.stackable){
+              data.amount = item.amount
+            }else{
+              data.amount = 1
             }
-          })
-        break;
-        case 'defense':
-        case 'change':
-        case 'escape':
-          playerAction(action, units[currentActivePlayer])
-        break;        
-      }      
+            
+            setItemList(prev => {
+              return [...prev, data]
+            })
+
+            if(data.stackable) break
+          }
+        })
+      break;
+      case 'defense':
+      case 'change':
+      case 'escape':
+        playerAction(action, units[currentActivePlayer])
+      break;        
+    }      
+  }
+
+  const cancelAction = () => {
+    if(units[currentActivePlayer].action === 'attack'){
+      dispatch(
+        updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' })
+      )
+      setShowCancel(false)
     }
 
-    const cancelAction = () => {
-      if(units[currentActivePlayer].action === 'attack'){
-        dispatch(
-          updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' })
-        )
-        setShowCancel(false)
-      }
-
-      if(units[currentActivePlayer].action === 'skill'){
-        setShowCancel(false)
-        setAction('skill') // Reset skill list, back to skill menu
-      }
-
-      if(units[currentActivePlayer].action === 'item'){
-        setShowCancel(false)
-        setAction('item') // Reset item list, back to item menu
-      }
+    if(units[currentActivePlayer].action === 'skill'){
+      setShowCancel(false)
+      setAction('skill') // Reset skill list, back to skill menu
     }
 
+    if(units[currentActivePlayer].action === 'item'){
+      setShowCancel(false)
+      setAction('item') // Reset item list, back to item menu
+    }
+  }
+
+  const actionClear = (unit, currentActivePlayer, loop=false) => {
+    const activeUnits = store.getState().game.activeUnits
+    dispatch(
+      setActiveUnits(activeUnits.filter((a) => a !== currentActivePlayer))
+    )
+    dispatch(setCurrentActivePlayer(-1))
+    // Reset action value
+    dispatch(
+      updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })
+    )            
+    if(loop) loopConstructor(currentActivePlayer, unit, positionRef, null, null)
+  }
   // region Player Action
   const playerAction = (action, unit, payload = null) => {
     if(unit === undefined) return
@@ -171,21 +183,33 @@ export default function Command() {
               currentActivePlayer
             ) 
           },
-          callback: () => {            
-            loopConstructor(currentActivePlayer, unit, positionRef, null, null)
-          }
+          callback: () => { loopConstructor(currentActivePlayer, unit, positionRef, null, null) }
         }
-        const copy = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
+        const activeUnits = store.getState().game.activeUnits
         dispatch(
-          setActiveUnits(copy.filter((a) => a !== currentActivePlayer))
+          setActiveUnits(activeUnits.filter((a) => a !== currentActivePlayer))
         )
         dispatch(setCurrentActivePlayer(-1))
         waitConstructor(currentActivePlayer, unit, input.action, input.callback)
       }
         // TODO - Switch to defense sprite / animation
         break
-      case 'change':
-        // TODO - Front line to back, back to front line
+      case 'change': {
+        // Front line to back, back to front line
+        const input = {
+          action: function(){ 
+            controller(
+              () => changeUnitOrder(),
+              currentActivePlayer
+            ) 
+          },
+          callback: () => { loopConstructor(currentActivePlayer, unit, positionRef, null, null) }
+        }
+        // Pause timers of the other units
+        pauseOrResume({ index: currentActivePlayer, value: true })
+        actionClear(unit, currentActivePlayer)
+        waitConstructor(currentActivePlayer, unit, input.action, input.callback)
+      }
         break
       case 'escape':
         isEscapable(unit).then(result => {      
@@ -210,15 +234,7 @@ export default function Command() {
             dispatch(setAllToStop(true))
             // Result screen
           }else{
-            const copy = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
-            dispatch(
-              setActiveUnits(copy.filter((a) => a !== currentActivePlayer))
-            )
-            dispatch(setCurrentActivePlayer(-1))
-            dispatch(
-              updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })
-            )            
-            loopConstructor(currentActivePlayer, unit, positionRef, null, null)
+            actionClear(unit, currentActivePlayer, true)
           }
         })
         break
@@ -249,9 +265,7 @@ export default function Command() {
 
     const input = {
       action: () => {},
-      callback: () => {
-        loopConstructor(currentActivePlayer, unit, positionRef, null, null)
-      }
+      callback: () => { loopConstructor(currentActivePlayer, unit, positionRef, null, null) }
     }
 
     switch(unit.action){
@@ -296,15 +310,8 @@ export default function Command() {
     dispatch(setPointedTarget(-1))
     spriteHoverEvent.paused = true
     spriteClickEvent.paused = true        
-
-    const copy = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
-    dispatch(
-      setActiveUnits(copy.filter((a) => a !== currentActivePlayer))
-    )
+    actionClear(unit, currentActivePlayer)
     waitConstructor(currentActivePlayer, unit, input.action, input.callback)
-    dispatch(setCurrentActivePlayer(-1))
-    // Reset action value
-    dispatch(updateUnit({ name: unit.name, attribute: unit.attribute, action: '' }))
   })
   // Default to paused
   spriteClickEvent.paused = true
@@ -314,7 +321,7 @@ export default function Command() {
     const currentActivePlayer = store.getState().game.currentActivePlayer
     const units = store.getState().game.units[currentActivePlayer]
 
-    if(currentActivePlayer < 0 || units && !units.action.length) return
+    if(currentActivePlayer < 0 || units.action === undefined || !units.action.length) return
 
     const tag = sprite.tags.find((tag) => tag.includes('index_'));
     const target = tag ? Number(tag.split('_')[1]) : -1;
@@ -355,17 +362,19 @@ export default function Command() {
       // Set the next acting player
       const next = activeUnits.find(a => a < 5)?? -1
       if(next >= 0){
-        console.log('Set the next acting player ', activeUnits)
+        console.log('Set the next acting player ', next)
+        console.log('activeUnits ', activeUnits)
         const unit = store.getState().game.units[next]
         // Update unit state only when the action value is empty
         if(!unit.action.length) dispatch(setCurrentActivePlayer(next))
-        else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
+        // else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
       }   
     }
   }, [activeUnits])  
   // endregion    
 
     useEffect(() => {
+      console.log('currentActivePlayer update ', currentActivePlayer)
       if(currentActivePlayer < 0){
         setShowCancel(false)
         setSkillList([])
@@ -374,7 +383,7 @@ export default function Command() {
 
     return(
       <>
-        <div className={`command ui ${currentActivePlayer >= 0 && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }} >
+        <div className={`command ui ${currentActivePlayer >= 0 && units[currentActivePlayer] && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }} >
           <div className='avatar'>
             { currentActivePlayer >= 0? units[currentActivePlayer].name : '' }
             <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>

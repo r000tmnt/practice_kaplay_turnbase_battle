@@ -58,7 +58,7 @@ function App() {
   }, [stopAll])
 
   useEffect(() => {
-    if(wave.current > 1 && wave.current < wave.max){
+    if(wave.current > 1){
       waveTransition(gameWidth, gameHeight)
     }
   }, [wave])

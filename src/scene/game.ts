@@ -62,6 +62,14 @@ export const spriteRef : GameObj[] = []
 export const skillRef : SkillRef[] = []
 export const itemRef : ItemRef[] = []
 
+export const playerPositionRef = [
+  // x, y in percentage
+  [0.7, 0.6], [0.7, 0.7], [0.8, 0.55], [0.8, 0.65], [0.8, 0.75]
+]
+const enemyPositionRef = [
+  // x, y in percentage
+  [0.22, 0.6], [0.22, 0.7], [0.12, 0.55], [0.12, 0.65], [0.12, 0.75]
+]
 let bg = {} as GameObj
 
 export const stopEverything = () => {
@@ -122,7 +130,8 @@ const drawCharacters = (wave: { current: number, max: number }) => {
             layer('game'),
             // tag
             "unit",
-            `index_${index}`
+            `index_${index}`,
+            `name_${data.name}`
           ])
         )          
       }  
@@ -150,11 +159,16 @@ const drawCharacters = (wave: { current: number, max: number }) => {
 // endregion
 
 export const changeSpritePosition = async() => {
-  const frontLine = spriteRef.filter((u, i) => i < 2)
-  const backLine = spriteRef.filter((u, i) => i > 1 && i < 5)
+  const gameWidth = store.getState().setting.width
+  const gameHeight = store.getState().setting.height
+  const frontLine = playerPositionRef.filter((p, i) => p[0] === 0.7)
+  const frontLineSprites = spriteRef.filter((u, i) => i < frontLine.length)
+  const backLine = playerPositionRef.filter((p, i) => p[0] === 0.8)
+  const backLineSprites = spriteRef.filter((u, i) => i > (frontLine.length - 1) && i < 5)
 
   try {
-    frontLine.forEach((s, i) => {
+    frontLine.forEach((p, i) => {
+      const s = frontLineSprites[i]
       const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
       const newIndex = oldIndex + frontLine.length
 
@@ -162,19 +176,31 @@ export const changeSpritePosition = async() => {
       s.untag(`index_${oldIndex}`)
       s.tag(`index_${newIndex}`)
 
-      const { x, y } = positionRef[0][newIndex].pos
+      // Change x axist
+      playerPositionRef[oldIndex][0] += 0.1
+
+      const newPosition = [gameWidth * playerPositionRef[oldIndex][0], gameHeight * playerPositionRef[oldIndex][1]]
+
+      tween(
+        positionRef[0][oldIndex].pos,
+        vec2(newPosition[0], newPosition[1]),
+        0.5,
+        (pos) => positionRef[0][oldIndex].pos = pos,
+        easings.easeInOutQuad
+      )
 
       // Move sprite
       tween(
         s.pos,
-        vec2(x - (128 / 2), y - (128 + 20)),
+        vec2(newPosition[0] - (128 / 2), newPosition[1] - (128 + 20)),
         0.5,
         (pos) => s.pos = pos,
         easings.easeInOutQuad
       )
     })
 
-    backLine.forEach((s, i) => {
+    backLine.forEach((p, i) => {
+      const s = backLineSprites[i]
       const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
       const newIndex = oldIndex - backLine.length
 
@@ -182,16 +208,27 @@ export const changeSpritePosition = async() => {
       s.untag(`index_${oldIndex}`)
       s.tag(`index_${newIndex}`)
 
-      const { x, y } = positionRef[0][newIndex].pos
+      // Change x axist
+      playerPositionRef[oldIndex][0] -= 0.1
+
+      const newPosition = [gameWidth * playerPositionRef[oldIndex][0], gameHeight * playerPositionRef[oldIndex][1]]
+
+      tween(
+        positionRef[0][oldIndex].pos,
+        vec2(newPosition[0], newPosition[1]),
+        0.5,
+        (pos) => positionRef[0][oldIndex].pos = pos,
+        easings.easeInOutQuad
+      )
 
       // Move sprite
       tween(
         s.pos,
-        vec2(x - (128 / 2), y - (128 + 20)),
+        vec2(newPosition[0] - (128 / 2), newPosition[1] - (128 + 20)),
         0.5,
         (pos) => s.pos = pos,
         easings.easeInOutQuad
-      )    
+      )
     })      
     return true
   } catch (error) {
@@ -318,22 +355,13 @@ export default function initGame(){
 
     // Calculate positions when the background is displayed
     wait(1, () => {
-      // Set position rects
-      const playerPositions : GameObj[] = []
-      const enemyPositions : GameObj[] = []
-      const playerPositionRef = [
-        // x, y in percentage
-        [0.7, 0.6], [0.7, 0.7], [0.8, 0.55], [0.8, 0.65], [0.8, 0.75]
-      ]
-      const enemyPositionRef = [
-        // x, y in percentage
-        [0.22, 0.6], [0.22, 0.7], [0.12, 0.55], [0.12, 0.65], [0.12, 0.75]
-      ]
-
       const size = gameWidth * 0.1
+      positionRef.push([]) // playerPositions       
+      positionRef.push([]) // enemyPositions      
 
       for(let i=0; i < 5; i++){
-        playerPositions.push(
+        // playerPositions 
+        positionRef[0].push(
           add([
             pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
             rect(size, size),
@@ -342,8 +370,8 @@ export default function initGame(){
             layer('game')
           ])
         )
-
-        enemyPositions.push(
+        // enemyPositions 
+        positionRef[1].push(
           add([
             pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
             rect(size, size),
@@ -353,9 +381,6 @@ export default function initGame(){
           ])
         )      
       }
-
-      positionRef.push(playerPositions)       
-      positionRef.push(enemyPositions)
       
       drawCharacters(wave)
     })    

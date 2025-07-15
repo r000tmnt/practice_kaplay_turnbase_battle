@@ -161,7 +161,7 @@ export const pauseOrResume = (payload: { index: number, value: boolean }) =>{
     })
 }
 
-const timerEndAction = (unit, index) => {
+const timerEndAction = (unit: Unit, index: number) => {
     console.log(unit.name, 'action after timer ended')
     const { stopAll } = getStoreState()
     // Notify the parent with the index
