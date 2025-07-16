@@ -8,6 +8,7 @@ import {
     setActiveUnits
 } from "../store/game";
 import { enemyAI } from './battle';
+import { positionRef } from '../scene/game';
 
 const { 
     add,
@@ -115,8 +116,7 @@ export const waitConstructor = (index: number, unit: Unit, action: Function, cal
 
     if(timers.find((t) => t.index === index)) return
 
-    const units = store.getState().game.units
-    const time = (units[index].action === 'defense')? 0 : unit.attribute.act * 10
+    const time = (unit.action === 'defense')? 0 : unit.attribute.act * 10
 
     console.log(unit.name, 'set up wait')
 
@@ -129,7 +129,7 @@ export const waitConstructor = (index: number, unit: Unit, action: Function, cal
                 action() 
             } catch (error) {
                 console.log(error)
-                console.log('unit action error', units[index])
+                console.log('unit action error', unit)
             }
         })
     }  
@@ -171,18 +171,13 @@ const timerEndAction = (unit: Unit, index: number) => {
 }   
 
 const onAtbBarFinished = (unit : Unit, index: number) => {
-    const activeUnits = store.getState().game.activeUnits
-
-    if(activeUnits.find(a => a === index) !== undefined) return
-
-    const copy = JSON.parse(JSON.stringify(activeUnits))
+    const copy = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
     copy.push(index)
     store.dispatch(
         setActiveUnits(copy)
     )
-    const unitData = store.getState().game.units[index]
 
-    if(unitData.action === 'defense') store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
+    if(unit.action === 'defense') store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
 
     // Checking buff or debuff turn counter
     const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
@@ -199,7 +194,7 @@ const onAtbBarFinished = (unit : Unit, index: number) => {
     }
 
     if(index > 4){
-        if(unitData.attribute.hp > 0){
+        if(unit.attribute.hp > 0){
         // Set enemy action after 1 to 3 seconds most
         wait(Math.round(Math.random() * 2) + 1, () => {
                 enemyAI(unit, index)

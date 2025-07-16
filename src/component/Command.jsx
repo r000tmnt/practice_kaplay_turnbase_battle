@@ -12,7 +12,7 @@ import {
   controller, attack, castSkill, 
   useItem, isEscapable, changeUnitOrder
 } from "../utils/battle"
-import { loopConstructor, waitConstructor, pauseOrResume } from "../utils/ATB"
+import { loopConstructor, waitConstructor } from "../utils/ATB"
 import { 
   skillRef, itemRef, positionRef,
   spriteRef
@@ -35,8 +35,8 @@ export default function Command() {
   const dispatch = useDispatch()
 
   const setAction = (action) => {
-    const unit = units[currentActivePlayer]
-
+    const unit = JSON.parse(JSON.stringify(units[currentActivePlayer]))
+    unit.action = action
     dispatch(
       updateUnit({ name: unit.name, attribute: unit.attribute, action })
     )
@@ -107,7 +107,8 @@ export default function Command() {
     // Reset action value
     dispatch(
       updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })
-    )            
+    )     
+    unit.action = ''       
     if(loop) loopConstructor(currentActivePlayer, unit, positionRef, null, null)
   }
   // region Player Action
@@ -206,8 +207,14 @@ export default function Command() {
           callback: () => { loopConstructor(currentActivePlayer, unit, positionRef, null, null) }
         }
         // Pause timers of the other units
-        pauseOrResume({ index: currentActivePlayer, value: true })
-        actionClear(unit, currentActivePlayer)
+        // pauseOrResume({ index: currentActivePlayer, value: true })
+        // actionClear(unit, currentActivePlayer)
+        const activeUnits = store.getState().game.activeUnits
+        // Only enemy is allow to act in the next few seconds
+        dispatch(
+          setActiveUnits(activeUnits.filter((a) => a > 4))
+        )
+        dispatch(setCurrentActivePlayer(-1))        
         waitConstructor(currentActivePlayer, unit, input.action, input.callback)
       }
         break
@@ -242,21 +249,16 @@ export default function Command() {
   }
 
   const spriteClickEvent = onClick('unit', (sprite) => {
-    // Get the latest state
-    const currentActivePlayer = store.getState().game.currentActivePlayer
-
     if(currentActivePlayer < 0) {
       console.log('current active player error', currentActivePlayer)
       return
     }
 
+    const unit = JSON.parse(JSON.stringify(units[currentActivePlayer]))
+    
     // Get the index of the clicked sprite
     const tag = sprite.tags.find((tag) => tag.includes('index_'));
     const target = tag ? Number(tag.split('_')[1]) : -1;
-
-    // Get the latest state
-    const units = store.getState().game.units
-    const unit = store.getState().game.units[currentActivePlayer] 
 
     if(unit && !unit.action.length) {
       console.log('unit action lost', unit)
@@ -321,7 +323,7 @@ export default function Command() {
     const currentActivePlayer = store.getState().game.currentActivePlayer
     const units = store.getState().game.units[currentActivePlayer]
 
-    if(currentActivePlayer < 0 || units.action === undefined || !units.action.length) return
+    if(currentActivePlayer < 0 || units === undefined || !units.action.length) return
 
     const tag = sprite.tags.find((tag) => tag.includes('index_'));
     const target = tag ? Number(tag.split('_')[1]) : -1;
@@ -366,7 +368,7 @@ export default function Command() {
         console.log('activeUnits ', activeUnits)
         const unit = store.getState().game.units[next]
         // Update unit state only when the action value is empty
-        if(!unit.action.length) dispatch(setCurrentActivePlayer(next))
+        if(unit && !unit.action.length) dispatch(setCurrentActivePlayer(next))
         // else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
       }   
     }
@@ -383,9 +385,9 @@ export default function Command() {
 
     return(
       <>
-        <div className={`command ui ${currentActivePlayer >= 0 && units[currentActivePlayer] && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }} >
+        <div className={`command ui ${currentActivePlayer >= 0 && units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }} >
           <div className='avatar'>
-            { currentActivePlayer >= 0? units[currentActivePlayer].name : '' }
+            { currentActivePlayer >= 0? units[currentActivePlayer]?.name : '' }
             <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
             <div className='meter'>
               <label>

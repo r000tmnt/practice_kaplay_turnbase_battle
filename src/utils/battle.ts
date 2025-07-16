@@ -52,6 +52,11 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
             showText(result)
         }
 
+        const units = store.getState().game.units
+
+        // Reset timers
+        if(units[index].action === 'change') Array.from([0, 1, 2, 3, 4]).filter(i => i !== index).forEach(i => loopConstructor(i, units[i], positionRef, null, null))
+
         if(actionCallBack) actionCallBack()
         
         // Tracking actived unit count
