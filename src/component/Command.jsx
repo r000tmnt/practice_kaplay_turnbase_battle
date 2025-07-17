@@ -200,11 +200,11 @@ export default function Command() {
         const input = {
           action: function(){ 
             controller(
-              () => changeUnitOrder(),
+              () => changeUnitOrder(currentActivePlayer),
               currentActivePlayer
             ) 
           },
-          callback: () => { loopConstructor(currentActivePlayer, unit, positionRef, null, null) }
+          callback: null
         }
         // Pause timers of the other units
         // pauseOrResume({ index: currentActivePlayer, value: true })

@@ -52,10 +52,11 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
             showText(result)
         }
 
-        const units = store.getState().game.units
-
-        // Reset timers
-        if(units[index].action === 'change') Array.from([0, 1, 2, 3, 4]).filter(i => i !== index).forEach(i => loopConstructor(i, units[i], positionRef, null, null))
+        if(typeof result === "number" && result >= 0){
+            // Reset timers
+            const units = store.getState().game.units
+            if(units[result].action === 'change') Array.from([0, 1, 2, 3, 4]).forEach(i => loopConstructor(i, units[i], positionRef, null, null))            
+        }
 
         if(actionCallBack) actionCallBack()
         
@@ -173,7 +174,7 @@ export const enemyAI = (unit, index) => {
         callback: () => {
             console.log(unit.name, 'callback loop')
             const unitData = store.getState().game.units[index]
-            if(unitData.attribute.hp > 0){
+            if(unitData && unitData.attribute.hp > 0){
                 loopConstructor(index, unit, positionRef, null, null)
             }
         }
@@ -238,7 +239,7 @@ const getAvailableTarget = (target: Unit ,tindex: number, start: number, end: nu
     const units = store.getState().game.units
 
     // Check if the target is in the field
-    if(units[tindex].attribute.hp === 0){
+    if(units[tindex] && units[tindex].attribute.hp === 0){
         // Change target if any
         let nextTarget: Unit | null = null
         for(let i=start; i < end; i++){
@@ -527,8 +528,7 @@ export const isEscapable = async(unit: Unit) => {
     return random <= posibility
 }
 
-export const changeUnitOrder = async() => {
-    const activeUnits = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
+export const changeUnitOrder = async(index: number) => {
     const units = JSON.parse(JSON.stringify(store.getState().game.units))
     const frontLine: Unit[] = []
     playerPositionRef.filter((p, i) => {
@@ -538,24 +538,13 @@ export const changeUnitOrder = async() => {
     playerPositionRef.filter((p, i) => {
         if(p[0] === 0.8) backLine.push(units[i])
     })
+    const enemies = units.splice(5, units.length - 5)
 
-    const newOrder = backLine.concat(frontLine).concat(
-        units.splice(5, 5)
-    )
-
+    const newOrder = backLine.concat(frontLine, enemies)
+    console.log('newOrder', newOrder)
     store.dispatch(
         setUnits(newOrder)
     )
 
-    // Alter active index
-    activeUnits.forEach((a: number) => {
-        if(a < frontLine.length) a += frontLine.length
-        if(a > frontLine.length) a -= backLine.length
-    });
-
-    store.dispatch(
-        setActiveUnits(activeUnits)
-    )
-
-    return changeSpritePosition()
+    return changeSpritePosition(index)
 }

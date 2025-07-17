@@ -158,17 +158,52 @@ const drawCharacters = (wave: { current: number, max: number }) => {
 }      
 // endregion
 
-export const changeSpritePosition = async() => {
+/**
+ * Switch sprite position on command "Change"
+ * Frontline to backline vice versa
+ * @param index - The number before change
+ * @returns 
+ */
+export const changeSpritePosition = async(index: number) => {
   const gameWidth = store.getState().setting.width
   const gameHeight = store.getState().setting.height
-  const frontLine = playerPositionRef.filter((p, i) => p[0] === 0.7)
-  const frontLineSprites = spriteRef.filter((u, i) => i < frontLine.length)
-  const backLine = playerPositionRef.filter((p, i) => p[0] === 0.8)
-  const backLineSprites = spriteRef.filter((u, i) => i > (frontLine.length - 1) && i < 5)
+  const units = JSON.parse(JSON.stringify(store.getState().game.units))
+  const frontLineUnit: Unit[] = []
+  const backLineUnits: Unit[] = []
+  const frontLine : number[][] = [] 
+  const backLine : number[][] = [] 
+  const enemies = units.splice(5, units.length - 5)
+  playerPositionRef.filter((p, i) => {
+    if(p[0] === 0.7){
+      frontLineUnit.push(units[i])
+      frontLine.push(p)
+    }
+
+    if(p[0] === 0.8){
+      backLineUnits.push(units[i])
+      backLine.push(p)
+    }
+  })
+
+  const newUnitOrder = backLineUnits.concat(frontLineUnit, enemies)
+  console.log('newUnitOrder', newUnitOrder)
+  store.dispatch(
+      setUnits(newUnitOrder)
+  )  
+
+  // Change x axist
+  frontLine.forEach((p) => p[0] = 0.8)
+  backLine.forEach((p) => p[0] = 0.7)
+
+  // Switch order
+  const newOrder: number[][] = []
+  newOrder.concat(backLine, frontLine)
+
+  // TODO - Change rect position index in the array
 
   try {
-    frontLine.forEach((p, i) => {
-      const s = frontLineSprites[i]
+    newOrder.forEach((p, i) => {
+      const s = spriteRef[i]
       const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
       const newIndex = oldIndex + frontLine.length
 
@@ -176,16 +211,14 @@ export const changeSpritePosition = async() => {
       s.untag(`index_${oldIndex}`)
       s.tag(`index_${newIndex}`)
 
-      // Change x axist
-      playerPositionRef[oldIndex][0] += 0.1
-
-      const newPosition = [gameWidth * playerPositionRef[oldIndex][0], gameHeight * playerPositionRef[oldIndex][1]]
+      const newPosition = [gameWidth * p[0], gameHeight * p[1]]
+      const target = (i < backLine.length)? 0 : 1
 
       tween(
-        positionRef[0][oldIndex].pos,
+        positionRef[target][oldIndex].pos,
         vec2(newPosition[0], newPosition[1]),
         0.5,
-        (pos) => positionRef[0][oldIndex].pos = pos,
+        (pos) => positionRef[target][oldIndex].pos = pos,
         easings.easeInOutQuad
       )
 
@@ -199,41 +232,15 @@ export const changeSpritePosition = async() => {
       )
     })
 
-    backLine.forEach((p, i) => {
-      const s = backLineSprites[i]
-      const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
-      const newIndex = oldIndex - backLine.length
+    // Replace playerPositionRef with the new array
+    playerPositionRef.splice(0)
+    playerPositionRef.concat(newOrder)
 
-      // Remove & add tag
-      s.untag(`index_${oldIndex}`)
-      s.tag(`index_${newIndex}`)
-
-      // Change x axist
-      playerPositionRef[oldIndex][0] -= 0.1
-
-      const newPosition = [gameWidth * playerPositionRef[oldIndex][0], gameHeight * playerPositionRef[oldIndex][1]]
-
-      tween(
-        positionRef[0][oldIndex].pos,
-        vec2(newPosition[0], newPosition[1]),
-        0.5,
-        (pos) => positionRef[0][oldIndex].pos = pos,
-        easings.easeInOutQuad
-      )
-
-      // Move sprite
-      tween(
-        s.pos,
-        vec2(newPosition[0] - (128 / 2), newPosition[1] - (128 + 20)),
-        0.5,
-        (pos) => s.pos = pos,
-        easings.easeInOutQuad
-      )
-    })      
-    return true
+    // Return the index after change
+    return (index < frontLine.length)? index + backLine.length : index - frontLine.length 
   } catch (error) {
     console.log('Error occured while changing sprite position ' + error)
-    return false
+    return -1
   }
 }
 
