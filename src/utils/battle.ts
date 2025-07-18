@@ -11,15 +11,15 @@ import {
     setWave,
     setAllToStop,
     setInactiveUnits,
-    // setUnits
+    setTurn,
 } from "../store/game";
 import k from '../lib/kaplay'
 import { Item, ItemRef } from "../model/item";
-import { positionRef, spriteRef, playerPositionRef } from "../scene/game";
+import { positionRef, spriteRef } from "../scene/game";
 import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./ATB";
 
 import skill from '../data/skill.json'
-import item from '../data/items.json'
+// import item from '../data/items.json'
 
 // import { skillRef, changeSpritePosition } from "../scene/game";
 
@@ -59,6 +59,8 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
             // Reset timers
             const units = store.getState().game.units
             if(units[result].action === 'change'){
+                const turn = store.getState().game.turn
+                store.dispatch(setTurn(turn + 1))
                 setData('changing', false)
                 store.dispatch(updateUnit({name: units[result].name, attribute: units[result].attribute, action: ''})) 
                 // Get players on the field
@@ -128,7 +130,6 @@ const unitLoseHandle = (tindex: number) => {
     // Get the latest state
     const activeUnits = store.getState().game.activeUnits
     const wave = store.getState().game.wave
-    const units = store.getState().game.units
 
     store.dispatch(
         setActiveUnits(activeUnits.filter(a => a !== tindex))
@@ -148,6 +149,7 @@ const unitLoseHandle = (tindex: number) => {
         removeBar(tindex)
 
         // TODO - If no more enemy in the scene
+        const units = store.getState().game.units
         let remain = 0
         // TODO - Need to set the starting number as the length of players
         for(let i=5; i < units.length; i++){
@@ -174,7 +176,7 @@ const unitLoseHandle = (tindex: number) => {
 // endregion
 
 // #region Enemy AI
-export const enemyAI = (unit, index) => {
+export const enemyAI = (unit: Unit, index: number) => {
     const actions = [ 'attack', 'skill', 'defense', 'escape' ]
                 
     const rng = Math.random() * actions.length
