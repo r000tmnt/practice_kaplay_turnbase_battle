@@ -10,12 +10,12 @@ import {
 } from '../store/game'
 import { 
   controller, attack, castSkill, 
-  useItem, isEscapable, changeUnitOrder
+  useItem, isEscapable
 } from "../utils/battle"
 import { loopConstructor, waitConstructor } from "../utils/ATB"
 import { 
   skillRef, itemRef, positionRef,
-  spriteRef
+  spriteRef, changeSpritePosition
 } from "../scene/game"
 
 const { 
@@ -200,7 +200,7 @@ export default function Command() {
         const input = {
           action: function(){ 
             controller(
-              () => changeUnitOrder(currentActivePlayer),
+              () => changeSpritePosition(currentActivePlayer),
               currentActivePlayer
             ) 
           },
