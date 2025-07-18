@@ -41,12 +41,8 @@ const gameSlice = createSlice({
             // If the unit's hp has beem updated
             const unit = state.units.find(unit => unit.name === name)
             if(unit && unit.attribute.hp !== 0){
-                state.units.map((unit) => {
-                    if(unit.name === name){
-                        unit.attribute = { ...attribute }
-                        unit.action = action.payload.action
-                    }
-                })
+                unit.action = action.payload.action
+                console.log(state.units)
             }else console.log('unit destroyed', name)
         },
         setActiveUnits: (state, action) => {
