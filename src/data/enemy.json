@@ -1,7 +1,6 @@
 [
     {
         "name": "E1",
-        "sprite": {},
         "attribute": {
             "hp": 25,
             "mp": 10,
@@ -22,7 +21,6 @@
     },
     {
         "name": "E2",
-        "sprite": {},
         "attribute": {
             "hp": 15,
             "mp": 35,
@@ -43,7 +41,6 @@
     },
     {
         "name": "E3",
-        "sprite": {},
         "attribute": {
             "hp": 25,
             "mp": 5,
@@ -64,7 +61,6 @@
     },
     {
         "name": "E4",
-        "sprite": {},
         "attribute": {
             "hp": 25,
             "mp": 25,
@@ -85,7 +81,6 @@
     },
     {
         "name": "E5",
-        "sprite": {},
         "attribute": {
             "hp": 20,
             "mp": 50,
