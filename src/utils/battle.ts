@@ -21,7 +21,7 @@ import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./AT
 import skill from '../data/skill.json'
 import item from '../data/items.json'
 
-import { skillRef, changeSpritePosition } from "../scene/game";
+// import { skillRef, changeSpritePosition } from "../scene/game";
 
 const { 
     add,
@@ -526,25 +526,4 @@ export const isEscapable = async(unit: Unit) => {
     console.log('rng: ', random)
 
     return random <= posibility
-}
-
-export const changeUnitOrder = async(index: number) => {
-    const units = JSON.parse(JSON.stringify(store.getState().game.units))
-    const frontLine: Unit[] = []
-    playerPositionRef.filter((p, i) => {
-        if(p[0] === 0.7) frontLine.push(units[i])
-    })
-    const backLine: Unit[] = []
-    playerPositionRef.filter((p, i) => {
-        if(p[0] === 0.8) backLine.push(units[i])
-    })
-    const enemies = units.splice(5, units.length - 5)
-
-    const newOrder = backLine.concat(frontLine, enemies)
-    console.log('newOrder', newOrder)
-    store.dispatch(
-        setUnits(newOrder)
-    )
-
-    return changeSpritePosition(index)
 }
