@@ -11,7 +11,7 @@ import {
     setWave,
     setAllToStop,
     setInactiveUnits,
-    setUnits
+    // setUnits
 } from "../store/game";
 import k from '../lib/kaplay'
 import { Item, ItemRef } from "../model/item";
@@ -40,6 +40,7 @@ const {
     YELLOW,
     WHITE,
     // RED
+    setData
 } = k
 
 // #region Shared actions
@@ -48,6 +49,8 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
     pauseOrResume({ index, value: true })
 
     actionFunction().then((result) => {
+        console.log('player ' + index + ' result', result)
+
         if(typeof result === "object") {
             showText(result)
         }
@@ -55,7 +58,16 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
         if(typeof result === "number" && result >= 0){
             // Reset timers
             const units = store.getState().game.units
-            if(units[result].action === 'change') Array.from([0, 1, 2, 3, 4]).forEach(i => loopConstructor(i, units[i], positionRef, null, null))            
+            if(units[result].action === 'change'){
+                setData('changing', false)
+                store.dispatch(updateUnit({name: units[result].name, attribute: units[result].attribute, action: ''})) 
+                // Get players on the field
+                const remain : number[] = []
+                Array.from([0, 1, 2, 3, 4]).forEach(i => {
+                    if(units[i].attribute.hp > 0) remain.push(i)
+                })
+                remain.forEach(i => loopConstructor(i, units[i], positionRef, null, null))
+            }            
         }
 
         if(actionCallBack) actionCallBack()
@@ -268,6 +280,8 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tindex: n
     const realTarget: Unit | null  = getAvailableTarget(target, tindex, 5, 10)
 
     if(!realTarget) return
+
+    console.log('target exist')
 
     const tension = store.getState().game.tension
 
