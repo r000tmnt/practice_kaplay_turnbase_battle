@@ -135,43 +135,48 @@ const unitLoseHandle = (tindex: number) => {
         setActiveUnits(activeUnits.filter(a => a !== tindex))
     )
 
-    tween(
-        spriteRef[tindex].opacity, 
-        0, 
-        0.5,
-        (o) => spriteRef[tindex].opacity = o, 
-        easings.linear
-    ).onEnd(() => {
-        // Remove sprite
-        spriteRef[tindex].destroy()
+    try {
+        tween(
+            spriteRef[tindex].opacity, 
+            0, 
+            0.5,
+            (o) => spriteRef[tindex].opacity = o, 
+            easings.linear
+        ).onEnd(() => {
+            // Remove sprite
+            spriteRef[tindex].destroy()
 
-        // Remove the atb bar of the unit
-        removeBar(tindex)
+            // Remove the atb bar of the unit
+            removeBar(tindex)
 
-        // TODO - If no more enemy in the scene
-        const units = store.getState().game.units
-        let remain = 0
-        // TODO - Need to set the starting number as the length of players
-        for(let i=5; i < units.length; i++){
-        // In case if the state is not update yet
-        if(units[i].attribute.hp > 0 && i !== tindex) remain += 1
-        }
+            // TODO - If no more enemy in the scene
+            const units = store.getState().game.units
+            let remain = 0
+            // TODO - Need to set the starting number as the length of players
+            for(let i=5; i < units.length; i++){
+                // In case if the state is not update yet
+                if(units[i].attribute.hp > 0 && i !== tindex) remain += 1
+            }
 
-        if(!remain){
-            store.dispatch(setAllToStop(true))
-            // initGame.stopAllUnit()
-            wait(0.3, () => {
-                if(wave.current !== wave.max){
-                    console.log('next wave?')
-                    store.dispatch(setWave(1))
-                }else{
-                    // TODO - End of the battle
-                }        
-            })
-        }
+            if(!remain){
+                store.dispatch(setAllToStop(true))
+                // initGame.stopAllUnit()
+                wait(0.3, () => {
+                    if(wave.current !== wave.max){
+                        console.log('next wave?')
+                        store.dispatch(setWave(1))
+                    }else{
+                        // TODO - End of the battle
+                    }        
+                })
+            }
 
-        console.log('remaing', remain)      
-    })
+            console.log('remaining', remain)      
+        })        
+    } catch (error) {
+        console.log('sprite destroyed')
+    }
+
 }
 // endregion
 
