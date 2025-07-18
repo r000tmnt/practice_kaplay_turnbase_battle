@@ -19,6 +19,7 @@ const {
     easings,
     tween,
     color,
+    getData
 } = k
 
 let timers : 
@@ -171,13 +172,16 @@ const timerEndAction = (unit: Unit, index: number) => {
 }   
 
 const onAtbBarFinished = (unit : Unit, index: number) => {
+    const changing = getData('changing', false)
+
+    // Do not set timer on position change
+    if(index < 5 && unit.action !== 'change' && changing) return
+
     const copy = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
     copy.push(index)
     store.dispatch(
         setActiveUnits(copy)
     )
-
-    if(unit.action === 'defense') store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
 
     // Checking buff or debuff turn counter
     const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
