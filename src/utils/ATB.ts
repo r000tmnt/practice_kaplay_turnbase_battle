@@ -3,12 +3,10 @@ import k from '../lib/kaplay'
 import store from "../store/store"
 import { Unit } from '../model/unit'
 import { 
-    updateUnit,
     updateEffectTurnCounter,
     setActiveUnits
 } from "../store/game";
 import { enemyAI } from './battle';
-import { positionRef } from '../scene/game';
 
 const { 
     add,
@@ -40,17 +38,22 @@ const getStoreState = () => {
     return { gameWidth, stopAll, activeUnits }
 }
 
+const skipTimer = (index: number, unit: Unit) => {
+    const changing = getData('changing', false)
+    return (index < 5 && unit.action !== 'change' && changing)
+}
+
 export const loopConstructor = (index: number, unit: Unit, position: GameObj[][], action: Function | null, callBack: Function | null) => {
     // console.log(index)
 
-    const { gameWidth, stopAll, activeUnits } = getStoreState()
+    const { stopAll } = getStoreState()
 
-    if(stopAll) return
+    if(stopAll || skipTimer(index, unit)) return
 
     wait(1, () => {
         console.log(index, 'after wait')
-
-        if(stopAll) return
+        const { gameWidth, stopAll, activeUnits } = getStoreState()
+        if(stopAll || skipTimer(index, unit)) return
 
         if(activeUnits.find(a => a === index)) return
 
@@ -111,7 +114,7 @@ export const loopConstructor = (index: number, unit: Unit, position: GameObj[][]
 export const waitConstructor = (index: number, unit: Unit, action: Function, callBack=null as Function | null) => {
     const { stopAll, activeUnits } = getStoreState()
 
-    if(stopAll) return
+    if(stopAll || skipTimer(index, unit)) return
 
     if(activeUnits.find(a => a === index)) return
 
@@ -125,7 +128,7 @@ export const waitConstructor = (index: number, unit: Unit, action: Function, cal
         index,
         controller: wait(time, () => {
             const { stopAll } = getStoreState()
-            if(stopAll) return
+            if(stopAll || skipTimer(index, unit)) return
             try {
                 action() 
             } catch (error) {
