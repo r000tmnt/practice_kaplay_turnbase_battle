@@ -45,10 +45,10 @@ export default function Command() {
     switch(action){
       case 'attack':
         setShowCancel(true)
-        playerAction(action, units[currentActivePlayer])
+        playerAction(action, unit)
       break;
       case 'skill':
-        units[currentActivePlayer].skill.forEach(s => {
+        unit.skill.forEach(s => {
           setSkillList(prev => {
             return [...prev, skills[s]]
           });
@@ -75,7 +75,7 @@ export default function Command() {
       case 'defense':
       case 'change':
       case 'escape':
-        playerAction(action, units[currentActivePlayer])
+        playerAction(action, unit)
       break;        
     }      
   }
@@ -272,8 +272,10 @@ export default function Command() {
     const input = {
       action: () => {},
       callback: () => { 
+        // Get latest state
+        const unit = store.getState().game.units[currentActivePlayer]
         const changing = getData('changing', false)
-        if(!changing) loopConstructor(currentActivePlayer, unit, positionRef, null, null) 
+        if(!changing && unit.attribute.hp > 0) loopConstructor(currentActivePlayer, unit, positionRef, null, null) 
       }
     }
 
