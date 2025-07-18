@@ -20,6 +20,21 @@ import { loopConstructor, removeBar } from '../utils/ATB';
 import { SkillRef } from '../model/skill';
 import { ItemRef } from '../model/item';
 
+// Fragment shader
+const loadFragmentShader = async(path: string) => {
+  try {
+    const res = await fetch(path)
+    if(!res.ok) return
+    const fragCode = await res.text()
+    return fragCode
+  } catch (error) {
+    console.log('Error while loading fragment shader')
+    return    
+  }
+}
+
+const wave_transition = await loadFragmentShader(`http://${window.location.host}/shaders/wave_transition.frag`)
+
 const { 
     add, 
     pos, 
@@ -172,6 +187,7 @@ export const changeSpritePosition = async(index: number) => {
   const backLineUnits: Unit[] = []
   const frontLine : number[][] = [] 
   const backLine : number[][] = [] 
+  const newPositionRef : GameObj[] = []
   const enemies = units.splice(5, units.length - 5)
   playerPositionRef.filter((p, i) => {
     if(p[0] === 0.7){
@@ -182,9 +198,18 @@ export const changeSpritePosition = async(index: number) => {
     if(p[0] === 0.8){
       backLineUnits.push(units[i])
       backLine.push(p)
+      newPositionRef.push(positionRef[0][i])
     }
   })
 
+  // Form a new positionRef for player
+  frontLine.forEach((p, i) => {
+    newPositionRef.push(positionRef[0][i])
+  })
+
+  positionRef[0] = newPositionRef
+
+  // Change unit order
   const newUnitOrder = backLineUnits.concat(frontLineUnit, enemies)
   console.log('newUnitOrder', newUnitOrder)
   store.dispatch(
@@ -196,10 +221,7 @@ export const changeSpritePosition = async(index: number) => {
   backLine.forEach((p) => p[0] = 0.7)
 
   // Switch order
-  const newOrder: number[][] = []
-  newOrder.concat(backLine, frontLine)
-
-  // TODO - Change rect position index in the array
+  const newOrder: number[][] = backLine.concat(frontLine)
 
   try {
     newOrder.forEach((p, i) => {
@@ -212,13 +234,12 @@ export const changeSpritePosition = async(index: number) => {
       s.tag(`index_${newIndex}`)
 
       const newPosition = [gameWidth * p[0], gameHeight * p[1]]
-      const target = (i < backLine.length)? 0 : 1
 
       tween(
-        positionRef[target][oldIndex].pos,
+        positionRef[0][i].pos,
         vec2(newPosition[0], newPosition[1]),
         0.5,
-        (pos) => positionRef[target][oldIndex].pos = pos,
+        (pos) => positionRef[0][i].pos = pos,
         easings.easeInOutQuad
       )
 
@@ -233,8 +254,7 @@ export const changeSpritePosition = async(index: number) => {
     })
 
     // Replace playerPositionRef with the new array
-    playerPositionRef.splice(0)
-    playerPositionRef.concat(newOrder)
+    playerPositionRef.splice(0, playerPositionRef.length, ...newOrder)
 
     // Return the index after change
     return (index < frontLine.length)? index + backLine.length : index - frontLine.length 
@@ -296,62 +316,7 @@ export default function initGame(){
 
     // Shader
     // Reference from: https://github.com/kaplayjs/kaplay/issues/394
-    // loadShader('outline', null,
-    //   `uniform vec3 u_color;
-
-    //   vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
-    //       vec4 outlineColor = vec4(vec3(u_color) / 255.0, 1.0);
-    //       vec2 textureSize = vec2(2048, 2048);
-    //       vec4 pixel = texture2D(tex, uv);
-    //       const float EPSILON = 0.0001;
-    //       if(pixel.a < EPSILON)
-    //       {
-    //           vec2 offset = vec2(1.0 / textureSize.x, 0.0);
-    //           float left = texture2D(tex, uv - offset).a;
-    //           float right = texture2D(tex, uv + offset).a;
-          
-    //           offset.x = 0.0;
-    //           offset.y = 1.0 / textureSize.y;
-    //           float up = texture2D(tex, uv - offset).a;
-    //           float down = texture2D(tex, uv + offset).a;
-          
-    //           float a = step(EPSILON, left + right + up + down);
-    //           pixel = mix(pixel, outlineColor, a);
-    //       }
-    //       return pixel;
-    //   }`
-    // )
-
-    loadShader('waveTransition', null,
-      `precision mediump float;
-
-      uniform float u_time;
-
-      vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
-          float progress = u_time * 0.5;
-
-          // Width of the mask band (0.3 = ~30% of screen width)
-          float bandWidth = 1.0;
-
-          // Jagged shape (random noise via sin)
-          float bands = 20.0;
-          float band = floor(uv.y * bands);
-          float bandOffset = mod(band, 2.0) * 0.05;
-          float jag = sin(uv.y * 100.0 + progress * 10.0) * 0.02;
-
-          // Moving window edges
-          float head = 1.5 - progress + bandOffset + jag;              // right jagged edge
-          float tail = head - bandWidth;                               // left jagged edge
-
-          // Inside the band: draw black
-          if (uv.x > tail && uv.x < head) {
-              return vec4(0.0, 0.0, 0.0, 1.0);
-          }
-
-          // Else: fully transparent
-          return vec4(0.0, 0.0, 0.0, 0.0);
-      }`
-    )
+    loadShader('waveTransition', null, wave_transition)
 
     bg = add([
       sprite('field'), 
