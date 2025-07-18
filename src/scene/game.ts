@@ -70,6 +70,7 @@ const {
     uvquad,
     // width,
     dt,
+    setData
   } = k
 
 export const positionRef : GameObj[][] = []
@@ -92,6 +93,8 @@ export const stopEverything = () => {
   Array.from([0, 1, 2, 3 ,4, 5, 6, 7, 8, 9]).forEach(i => {
     removeBar(i)
   })
+  // STOP changing position if set
+  setData('changing', false)
   // Empty activeUnit stack
   store.dispatch(setActiveUnits([]))        
   // Reset pointer
@@ -121,8 +124,10 @@ const drawCharacters = (wave: { current: number, max: number }) => {
         const units = store.getState().game.units
         if(!units[index]) break
         data = JSON.parse(JSON.stringify(units[index]))
+        // Reset action
+        if(data) data.action = ''
         if(i > 0 && data){
-          // Refill the hp and mp
+          // Refill the hp and mp of the enemy
           data.attribute.hp = data.attribute.maxHp
           data.attribute.mp = data.attribute.maxMp
         }
@@ -317,6 +322,8 @@ export default function initGame(){
     // Shader
     // Reference from: https://github.com/kaplayjs/kaplay/issues/394
     loadShader('waveTransition', null, wave_transition)
+
+    setData('changing', false)
 
     bg = add([
       sprite('field'), 
