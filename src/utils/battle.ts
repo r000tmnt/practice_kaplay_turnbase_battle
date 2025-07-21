@@ -12,6 +12,7 @@ import {
     setAllToStop,
     setInactiveUnits,
     setTurn,
+    setCurrentActivePlayer,
 } from "../store/game";
 import k from '../lib/kaplay'
 import { Item, ItemRef } from "../model/item";
@@ -20,6 +21,7 @@ import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./AT
 
 import skill from '../data/skill.json'
 import { TweenController } from "kaplay";
+import { current } from "@reduxjs/toolkit";
 // import item from '../data/items.json'
 
 // import { skillRef, changeSpritePosition } from "../scene/game";
@@ -135,6 +137,13 @@ const showText = ({unit, number, crit, tIndex, attribute}) => {
         if(attribute.hp === 0) {
             unitLoseHandle(tIndex)
             removeBar(tIndex)
+            const currentActivePlayer = store.getState().game.currentActivePlayer
+            if(tIndex === currentActivePlayer){
+                // Hide command component
+                store.dispatch(
+                    setCurrentActivePlayer(-1)
+                )
+            }
         }else{
             store.dispatch(
                 setTension({ current: 1 })
@@ -290,7 +299,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
 
                 // 0 means ALL
-                attribute.mp -= skill.cost.mp? skill.cost.mp : attribute.mp
+                attribute.mp -= (skill.cost.mp && skill.cost.mp === 0)? attribute.mp : skill.cost.mp
                 if(skill.cost.tension !== undefined) 
                     store.dispatch(
                         setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
@@ -330,6 +339,11 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 if(rng <= crit){
                     dmg = Math.round(dmg * 1.5)
                 }
+
+                // If the target is in the backline
+                if(uIndex > 4 && tIndex > 1 || uIndex < 5 && tIndex > 6){
+                    dmg = Math.round(dmg * 0.75) // Reduce damage by 75%
+                }                
 
                 // If the target take defense
                 if(realTarget.action === 'defense') dmg = Math.round(dmg / 2)    
