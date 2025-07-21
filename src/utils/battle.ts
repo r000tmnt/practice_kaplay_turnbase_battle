@@ -19,6 +19,7 @@ import { positionRef, spriteRef } from "../scene/game";
 import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./ATB";
 
 import skill from '../data/skill.json'
+import { TweenController } from "kaplay";
 // import item from '../data/items.json'
 
 // import { skillRef, changeSpritePosition } from "../scene/game";
@@ -42,6 +43,9 @@ const {
     // RED
     setData
 } = k
+
+// sprite fade out timers
+let fadeOutTimers: {index: number, controller: TweenController}[] = []
 
 // #region Shared actions
 export const controller = (actionFunction: Function, index: number, actionCallBack = null as Function | null) => {
@@ -89,12 +93,12 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
     })
 }
 
-const showText = ({unit, number, crit, tindex, attribute}) => {
-    if(!spriteRef[tindex]) return
+const showText = ({unit, number, crit, tIndex, attribute}) => {
+    if(!spriteRef[tIndex]) return
     // Create text
     const resultText = add([
         text(number, { size: crit? 48 : 36 }),
-        pos(spriteRef[tindex].pos.x + (128 / 2), spriteRef[tindex].pos.y - 10),
+        pos(spriteRef[tIndex].pos.x + (128 / 2), spriteRef[tIndex].pos.y - 10),
         opacity(1),
         color(crit? YELLOW : WHITE),
         outline(1, BLACK)
@@ -111,8 +115,8 @@ const showText = ({unit, number, crit, tindex, attribute}) => {
         resultText.destroy()
 
         if(attribute.hp === 0) {
-            unitLoseHandle(tindex)
-            removeBar(tindex)
+            unitLoseHandle(tIndex)
+            removeBar(tIndex)
         }else{
             store.dispatch(
                 setTension({ current: 1 })
@@ -121,7 +125,7 @@ const showText = ({unit, number, crit, tindex, attribute}) => {
     })
 }
 
-const unitLoseHandle = (tindex: number) => {
+const unitLoseHandle = (tIndex: number) => {
     // TODO - Unit lose animation
     store.dispatch(
         setTension({ current: 5 })
@@ -132,22 +136,26 @@ const unitLoseHandle = (tindex: number) => {
     const wave = store.getState().game.wave
 
     store.dispatch(
-        setActiveUnits(activeUnits.filter(a => a !== tindex))
+        setActiveUnits(activeUnits.filter(a => a !== tIndex))
     )
 
     try {
-        tween(
-            spriteRef[tindex].opacity, 
+        const timer = tween(
+            spriteRef[tIndex].opacity, 
             0, 
             0.5,
-            (o) => spriteRef[tindex].opacity = o, 
+            (o) => spriteRef[tIndex].opacity = o, 
             easings.linear
-        ).onEnd(() => {
+        )
+        
+        timer.onEnd(() => {
+            // Remove timer
+            fadeOutTimers = fadeOutTimers.filter(t => t.index !== tIndex)
             // Remove sprite
-            spriteRef[tindex].destroy()
+            spriteRef[tIndex].destroy()
 
             // Remove the atb bar of the unit
-            removeBar(tindex)
+            removeBar(tIndex)
 
             // TODO - If no more enemy in the scene
             const units = store.getState().game.units
@@ -155,24 +163,29 @@ const unitLoseHandle = (tindex: number) => {
             // TODO - Need to set the starting number as the length of players
             for(let i=5; i < units.length; i++){
                 // In case if the state is not update yet
-                if(units[i].attribute.hp > 0 && i !== tindex) remain += 1
+                if(units[i].attribute.hp > 0 && i !== tIndex) remain += 1
             }
 
             if(!remain){
-                store.dispatch(setAllToStop(true))
-                // initGame.stopAllUnit()
-                wait(0.3, () => {
-                    if(wave.current !== wave.max){
-                        console.log('next wave?')
-                        store.dispatch(setWave(1))
-                    }else{
-                        // TODO - End of the battle
-                    }        
-                })
+                // If no more timer
+                if(fadeOutTimers.length === 0){
+                    store.dispatch(setAllToStop(true))
+                    // initGame.stopAllUnit()
+                    wait(0.3, () => {
+                        if(wave.current !== wave.max){
+                            console.log('next wave?')
+                            store.dispatch(setWave(1))
+                        }else{
+                            // TODO - End of the battle
+                        }        
+                    })                    
+                }
             }
 
             console.log('remaining', remain)      
-        })        
+        })
+
+        fadeOutTimers.push({ index: tIndex, controller: timer })        
     } catch (error) {
         console.log('sprite destroyed')
     }
@@ -253,12 +266,12 @@ export const enemyAI = (unit: Unit, index: number) => {
 }
 // #endregion
 
-const getAvailableTarget = (target: Unit ,tindex: number, start: number, end: number) => {
+const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: number) => {
     // Get latest state
     const units = store.getState().game.units
 
     // Check if the target is in the field
-    if(units[tindex] && units[tindex].attribute.hp === 0){
+    if(units[tIndex] && units[tIndex].attribute.hp === 0){
         // Change target if any
         let nextTarget: Unit | null = null
         for(let i=start; i < end; i++){
@@ -280,11 +293,11 @@ const getAvailableTarget = (target: Unit ,tindex: number, start: number, end: nu
  * Attack function
  * @param {Unit} unit - Who is going to attack
  * @param {Unit} target - Who takes damage 
- * @param {number} uindex - The index of the player unit in the unitSprites array
- * @param {number} tindex - The index of the enemy unit in the unitSprites array
+ * @param {number} uIndex - The index of the player unit in the unitSprites array
+ * @param {number} tIndex - The index of the enemy unit in the unitSprites array
  */
-export const attack = async (unit: Unit, target: Unit, uIndex: number, tindex: number) => {
-    const realTarget: Unit | null  = getAvailableTarget(target, tindex, 5, 10)
+export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: number) => {
+    const realTarget: Unit | null  = getAvailableTarget(target, tIndex, 5, 10)
 
     if(!realTarget) return
 
@@ -303,7 +316,12 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tindex: n
         dmg = Math.round(dmg * 1.5)
     }
 
-    // If the target take defense
+    // If the target is in the backline
+    if(uIndex > 4 && tIndex > 1 || uIndex < 5 && tIndex > 6){
+        dmg = Math.round(dmg * 0.75) // Reduce damage by 75%
+    }
+
+    // If the target is in defense action
     if(realTarget.action === 'defense') dmg = Math.round(dmg / 2)    
 
     const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
@@ -313,19 +331,19 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tindex: n
         updateUnit({ name: realTarget.name, attribute: attribute, action: realTarget.action })
     )
 
-    // return showText(unit, dmg, rng, crit, tindex, attribute)
-    return { unit, number: dmg, crit: rng <= crit, tindex, attribute }
+    // return showText(unit, dmg, rng, crit, tIndex, attribute)
+    return { unit, number: dmg, crit: rng <= crit, tIndex, attribute }
 }
-  
+
 /**
  * Skill function
  * @param {Unit} unit - Who is going to cast thes kill
  * @param {Unit} target - Who takes damage 
- * @param {number} uindex - The index of the player unit in the unitSprites array
- * @param {number} tindex - The index of the enemy unit in the unitSprites array
+ * @param {number} uIndex - The index of the player unit in the unitSprites array
+ * @param {number} tIndex - The index of the enemy unit in the unitSprites array
  * @param {Skill} skill - The skill object
  */
-export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex: number, skill: Skill) => {
+export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex: number, skill: Skill) => {
     // Display skill name
     store.dispatch(
         setCurrentCastingSkill(skill.name)
@@ -335,7 +353,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
         // Calculate the number or damage
         wait(0.7, () => {
             if(skill.type !== 'Support'){
-                const realTarget: Unit | null = getAvailableTarget(target, tindex, 5, 10)
+                const realTarget: Unit | null = getAvailableTarget(target, tIndex, 5, 10)
                 if(!realTarget) return
 
                 const tension = store.getState().game.tension
@@ -393,10 +411,10 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                     updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
                 )
 
-                // return showText(unit, dmg, rng, crit, tindex, attribute)    
-                resolve({ unit, number: dmg, crit: rng <= crit, tindex, attribute })
+                // return showText(unit, dmg, rng, crit, tIndex, attribute)    
+                resolve({ unit, number: dmg, crit: rng <= crit, tIndex, attribute })
             }else{
-                const realTarget: Unit | null = getAvailableTarget(target, tindex, 0, 5)
+                const realTarget: Unit | null = getAvailableTarget(target, tIndex, 0, 5)
                 if(!realTarget) return
 
                 // Copy assigned effects
@@ -457,13 +475,13 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tindex
                     updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
                 )
 
-                resolve({ unit, number, crit: false, tindex, attribute })    
+                resolve({ unit, number, crit: false, tIndex, attribute })    
             }
         })        
     })
 }
 
-export const useItem = async (unit: Unit, target: Unit, uIndex: number, tindex: number, item: Item) => {
+export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: number, item: Item) => {
     // Display item name
     store.dispatch(
         setCurrentCastingSkill(item.name)
@@ -472,7 +490,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tindex: 
     return new Promise((resolve, reject) => {
         // Calculate the number or damage
         wait(0.7, () => {
-            const realTarget: Unit | null = getAvailableTarget(target, tindex, 0, 5)
+            const realTarget: Unit | null = getAvailableTarget(target, tIndex, 0, 5)
             if(!realTarget) return
 
             const inventory = JSON.parse(JSON.stringify(store.getState().game.inventory))
@@ -528,7 +546,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tindex: 
                 updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
             )
 
-            if(number > 0) resolve({ unit, number, crit: false, tindex, attribute })                
+            if(number > 0) resolve({ unit, number, crit: false, tIndex, attribute })                
         })        
     })
 }
