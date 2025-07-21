@@ -68,10 +68,7 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
                 setData('changing', false)
                 store.dispatch(updateUnit({name: units[result].name, attribute: units[result].attribute, action: ''})) 
                 // Get players on the field
-                const remain : number[] = []
-                Array.from([0, 1, 2, 3, 4]).forEach(i => {
-                    if(units[i].attribute.hp > 0) remain.push(i)
-                })
+                const remain : number[] = Array.from([0, 1, 2, 3, 4]).filter(i => units[i].attribute.hp > 0)
                 remain.forEach(i => loopConstructor(i, units[i], positionRef, null, null))
             }            
         }
@@ -91,6 +88,27 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
         // Resume timers of the other units
         pauseOrResume({ index, value: false })
     })
+}
+
+const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: number) => {
+    // Get latest state
+    const units = store.getState().game.units
+
+    // Check if the target is in the field
+    if(units[tIndex] && units[tIndex].attribute.hp === 0){
+        // Change target if any
+        let nextTarget: Unit | null = null
+        for(let i=start; i < end; i++){
+            if(units[i] && units[i].attribute.hp > 0){
+                nextTarget = units[i]
+                break
+            }
+        }
+
+        return nextTarget
+    }else{
+        return target
+    }
 }
 
 const showText = ({unit, number, crit, tIndex, attribute}) => {
@@ -191,103 +209,6 @@ const unitLoseHandle = (tIndex: number) => {
     }
 
 }
-// endregion
-
-// #region Enemy AI
-export const enemyAI = (unit: Unit, index: number) => {
-    const actions = [ 'attack', 'skill', 'defense', 'escape' ]
-                
-    const rng = Math.random() * actions.length
-
-    const action = actions[Math.floor(rng)]
-
-    const input = {
-        action: () => {},
-        callback: () => {
-            console.log(unit.name, 'callback loop')
-            const unitData = store.getState().game.units[index]
-            if(unitData && unitData.attribute.hp > 0){
-                loopConstructor(index, unit, positionRef, null, null)
-            }
-        }
-    }
-
-    // Keep tracking action
-    store.dispatch(
-        updateUnit({ name: unit.name, attribute: unit.attribute, action })
-    )
-
-    // TODO - Call the action
-    switch (action) {
-        case 'attack':{
-            // Choose a player
-            const target = Math.round(Math.random() * 4)
-            const units = store.getState().game.units
-            input.action = function(){ controller(() => attack(unit, units[target], index, target), index ) } 
-        }
-        break
-        case 'skill':{
-            const skillList = unit.skill.map((s: number) => skill[s])
-            const units = store.getState().game.units
-            // Picking skill
-            const skillToCast = skillList[Math.floor(Math.random() * (skillList.length - 1))]
-            let target = 0
-            // Picking target
-            if(skillToCast.type === 'support')
-                target = Math.round(Math.random() * 4) + 5
-            else
-                target = Math.round(Math.random() * 4)
-
-            input.action = function(){ controller(async() => castSkill(unit, units[target], index, target, skillToCast), index ) } 
-        }
-        break
-        // case 'item':
-        //   input.action = function(){ controller(async() => { console.log('Enemy item')}, index ) } 
-        //   break
-        case 'defense':
-            input.action = function(){ controller(async() => { console.log('Enemy defense')}, index ) } 
-        break
-        // case 'change':
-        //   input.action = function(){ controller(async() => { console.log('Enemy change')}, index ) } 
-        //   break
-        case 'escape':
-            input.action = function(){ controller(async() => { console.log('Enemy escape')}, index ) } 
-        break
-    }
-
-    const copy = JSON.parse(JSON.stringify(
-        store.getState().game.activeUnits
-    ))
-    store.dispatch(
-        setActiveUnits(copy.filter((a: number) => a !== index))
-    )
-
-    waitConstructor(index, unit, input.action, input.callback)
-}
-// #endregion
-
-const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: number) => {
-    // Get latest state
-    const units = store.getState().game.units
-
-    // Check if the target is in the field
-    if(units[tIndex] && units[tIndex].attribute.hp === 0){
-        // Change target if any
-        let nextTarget: Unit | null = null
-        for(let i=start; i < end; i++){
-            if(units[i] && units[i].attribute.hp > 0){
-                nextTarget = units[i]
-                break
-            }
-        }
-
-        if(nextTarget) target = nextTarget
-
-        return nextTarget
-    }else{
-        return target
-    }
-}
 
 /**
  * Attack function
@@ -299,7 +220,11 @@ const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: nu
 export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: number) => {
     const realTarget: Unit | null  = getAvailableTarget(target, tIndex, 5, 10)
 
-    if(!realTarget) return
+    if(!realTarget){
+        // Cancel action
+        store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+        return
+    }
 
     console.log('target exist')
 
@@ -354,7 +279,11 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
         wait(0.7, () => {
             if(skill.type !== 'Support'){
                 const realTarget: Unit | null = getAvailableTarget(target, tIndex, 5, 10)
-                if(!realTarget) return
+                if(!realTarget){
+                    // Cancel action
+                    store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+                    return
+                }
 
                 const tension = store.getState().game.tension
 
@@ -415,7 +344,11 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 resolve({ unit, number: dmg, crit: rng <= crit, tIndex, attribute })
             }else{
                 const realTarget: Unit | null = getAvailableTarget(target, tIndex, 0, 5)
-                if(!realTarget) return
+                if(!realTarget){
+                    // Cancel action
+                    store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+                    return
+                }
 
                 // Copy assigned effects
                 const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
@@ -491,7 +424,11 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
         // Calculate the number or damage
         wait(0.7, () => {
             const realTarget: Unit | null = getAvailableTarget(target, tIndex, 0, 5)
-            if(!realTarget) return
+            if(!realTarget){
+                // Cancel action
+                store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+                return
+            }
 
             const inventory = JSON.parse(JSON.stringify(store.getState().game.inventory))
 
@@ -566,3 +503,77 @@ export const isEscapable = async(unit: Unit) => {
 
     return random <= posibility
 }
+// endregion
+
+// #region Enemy AI
+export const enemyAI = (unit: Unit, index: number) => {
+    const actions = [ 'attack', 'skill', 'defense', 'escape' ]
+                
+    const rng = Math.random() * actions.length
+
+    const action = actions[Math.floor(rng)]
+
+    const input = {
+        action: () => {},
+        callback: () => {
+            console.log(unit.name, 'callback loop')
+            const unitData = store.getState().game.units[index]
+            if(unitData && unitData.attribute.hp > 0){
+                loopConstructor(index, unit, positionRef, null, null)
+            }
+        }
+    }
+
+    // Keep tracking action
+    store.dispatch(
+        updateUnit({ name: unit.name, attribute: unit.attribute, action })
+    )
+
+    // TODO - Call the action
+    switch (action) {
+        case 'attack':{
+            // Choose a player
+            const target = Math.round(Math.random() * 4)
+            const units = store.getState().game.units
+            input.action = function(){ controller(() => attack(unit, units[target], index, target), index ) } 
+        }
+        break
+        case 'skill':{
+            const skillList = unit.skill.map((s: number) => skill[s])
+            const units = store.getState().game.units
+            // Picking skill
+            const skillToCast = skillList[Math.floor(Math.random() * (skillList.length - 1))]
+            let target = 0
+            // Picking target
+            if(skillToCast.type === 'support')
+                target = Math.round(Math.random() * 4) + 5
+            else
+                target = Math.round(Math.random() * 4)
+
+            input.action = function(){ controller(async() => castSkill(unit, units[target], index, target, skillToCast), index ) } 
+        }
+        break
+        // case 'item':
+        //   input.action = function(){ controller(async() => { console.log('Enemy item')}, index ) } 
+        //   break
+        case 'defense':
+            input.action = function(){ controller(async() => { console.log('Enemy defense')}, index ) } 
+        break
+        // case 'change':
+        //   input.action = function(){ controller(async() => { console.log('Enemy change')}, index ) } 
+        //   break
+        case 'escape':
+            input.action = function(){ controller(async() => { console.log('Enemy escape')}, index ) } 
+        break
+    }
+
+    const copy = JSON.parse(JSON.stringify(
+        store.getState().game.activeUnits
+    ))
+    store.dispatch(
+        setActiveUnits(copy.filter((a: number) => a !== index))
+    )
+
+    waitConstructor(index, unit, input.action, input.callback)
+}
+// #endregion
