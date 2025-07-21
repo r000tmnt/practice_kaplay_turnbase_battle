@@ -17,6 +17,7 @@ interface Unit {
         status: string
     },
     action: string,
+    skill: number[]
 }
 
 interface Position {

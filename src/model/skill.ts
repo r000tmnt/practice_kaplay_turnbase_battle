@@ -6,11 +6,11 @@ interface Skill {
     id: number,
     name: string,
     type: string,
-    cost: Record<AllowedAttributes, number>,
+    cost: Partial<Record<AllowedAttributes, number>>,
     attribute: {
         dmg: { min: number, max: number } | null,
-        buff: Record<AllowedAttributes, number> | null,
-        debuff: Record<AllowedAttributes, number> | null,
+        buff: Partial<Record<AllowedAttributes, number>> | null,
+        debuff: Partial<Record<AllowedAttributes, number>> | null,
     },
 }
 

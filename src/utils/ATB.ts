@@ -3,7 +3,6 @@ import k from '../lib/kaplay'
 import store from "../store/store"
 import { Unit } from '../model/unit'
 import { 
-    updateUnit,
     updateEffectTurnCounter,
     setActiveUnits
 } from "../store/game";
@@ -18,6 +17,7 @@ const {
     easings,
     tween,
     color,
+    getData
 } = k
 
 let timers : 
@@ -38,17 +38,22 @@ const getStoreState = () => {
     return { gameWidth, stopAll, activeUnits }
 }
 
+const skipTimer = (index: number, unit: Unit) => {
+    const changing = getData('changing', false)
+    return (index < 5 && unit.action !== 'change' && changing)
+}
+
 export const loopConstructor = (index: number, unit: Unit, position: GameObj[][], action: Function | null, callBack: Function | null) => {
     // console.log(index)
 
-    const { gameWidth, stopAll, activeUnits } = getStoreState()
+    const { stopAll } = getStoreState()
 
-    if(stopAll) return
+    if(stopAll || skipTimer(index, unit)) return
 
     wait(1, () => {
         console.log(index, 'after wait')
-
-        if(stopAll) return
+        const { gameWidth, stopAll, activeUnits } = getStoreState()
+        if(stopAll || skipTimer(index, unit)) return
 
         if(activeUnits.find(a => a === index)) return
 
@@ -109,14 +114,13 @@ export const loopConstructor = (index: number, unit: Unit, position: GameObj[][]
 export const waitConstructor = (index: number, unit: Unit, action: Function, callBack=null as Function | null) => {
     const { stopAll, activeUnits } = getStoreState()
 
-    if(stopAll) return
+    if(stopAll || skipTimer(index, unit)) return
 
     if(activeUnits.find(a => a === index)) return
 
     if(timers.find((t) => t.index === index)) return
 
-    const units = store.getState().game.units
-    const time = (units[index].action === 'defense')? 0 : unit.attribute.act * 10
+    const time = (unit.action === 'defense')? 0 : unit.attribute.act * 10
 
     console.log(unit.name, 'set up wait')
 
@@ -124,12 +128,12 @@ export const waitConstructor = (index: number, unit: Unit, action: Function, cal
         index,
         controller: wait(time, () => {
             const { stopAll } = getStoreState()
-            if(stopAll) return
+            if(stopAll || skipTimer(index, unit)) return
             try {
                 action() 
             } catch (error) {
                 console.log(error)
-                console.log('unit action error', units[index])
+                console.log('unit action error', unit)
             }
         })
     }  
@@ -161,7 +165,7 @@ export const pauseOrResume = (payload: { index: number, value: boolean }) =>{
     })
 }
 
-const timerEndAction = (unit, index) => {
+const timerEndAction = (unit: Unit, index: number) => {
     console.log(unit.name, 'action after timer ended')
     const { stopAll } = getStoreState()
     // Notify the parent with the index
@@ -171,18 +175,16 @@ const timerEndAction = (unit, index) => {
 }   
 
 const onAtbBarFinished = (unit : Unit, index: number) => {
-    const activeUnits = store.getState().game.activeUnits
+    const changing = getData('changing', false)
 
-    if(activeUnits.find(a => a === index) !== undefined) return
+    // Do not set timer on position change
+    if(index < 5 && unit.action !== 'change' && changing) return
 
-    const copy = JSON.parse(JSON.stringify(activeUnits))
+    const copy = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
     copy.push(index)
     store.dispatch(
         setActiveUnits(copy)
     )
-    const unitData = store.getState().game.units[index]
-
-    if(unitData.action === 'defense') store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
 
     // Checking buff or debuff turn counter
     const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
@@ -199,7 +201,7 @@ const onAtbBarFinished = (unit : Unit, index: number) => {
     }
 
     if(index > 4){
-        if(unitData.attribute.hp > 0){
+        if(unit.attribute.hp > 0){
         // Set enemy action after 1 to 3 seconds most
         wait(Math.round(Math.random() * 2) + 1, () => {
                 enemyAI(unit, index)

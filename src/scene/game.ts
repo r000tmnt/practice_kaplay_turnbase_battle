@@ -20,6 +20,21 @@ import { loopConstructor, removeBar } from '../utils/ATB';
 import { SkillRef } from '../model/skill';
 import { ItemRef } from '../model/item';
 
+// Fragment shader
+const loadFragmentShader = async(path: string) => {
+  try {
+    const res = await fetch(path)
+    if(!res.ok) return
+    const fragCode = await res.text()
+    return fragCode
+  } catch (error) {
+    console.log('Error while loading fragment shader')
+    return    
+  }
+}
+
+const wave_transition = await loadFragmentShader(`http://${window.location.host}/shaders/wave_transition.frag`)
+
 const { 
     add, 
     pos, 
@@ -55,6 +70,7 @@ const {
     uvquad,
     // width,
     dt,
+    setData
   } = k
 
 export const positionRef : GameObj[][] = []
@@ -62,6 +78,14 @@ export const spriteRef : GameObj[] = []
 export const skillRef : SkillRef[] = []
 export const itemRef : ItemRef[] = []
 
+export const playerPositionRef = [
+  // x, y in percentage
+  [0.7, 0.6], [0.7, 0.7], [0.8, 0.55], [0.8, 0.65], [0.8, 0.75]
+]
+const enemyPositionRef = [
+  // x, y in percentage
+  [0.22, 0.6], [0.22, 0.7], [0.12, 0.55], [0.12, 0.65], [0.12, 0.75]
+]
 let bg = {} as GameObj
 
 export const stopEverything = () => {
@@ -69,6 +93,8 @@ export const stopEverything = () => {
   Array.from([0, 1, 2, 3 ,4, 5, 6, 7, 8, 9]).forEach(i => {
     removeBar(i)
   })
+  // STOP changing position if set
+  setData('changing', false)
   // Empty activeUnit stack
   store.dispatch(setActiveUnits([]))        
   // Reset pointer
@@ -98,8 +124,10 @@ const drawCharacters = (wave: { current: number, max: number }) => {
         const units = store.getState().game.units
         if(!units[index]) break
         data = JSON.parse(JSON.stringify(units[index]))
+        // Reset action
+        if(data) data.action = ''
         if(i > 0 && data){
-          // Refill the hp and mp
+          // Refill the hp and mp of the enemy
           data.attribute.hp = data.attribute.maxHp
           data.attribute.mp = data.attribute.maxMp
         }
@@ -122,7 +150,8 @@ const drawCharacters = (wave: { current: number, max: number }) => {
             layer('game'),
             // tag
             "unit",
-            `index_${index}`
+            `index_${index}`,
+            `name_${data.name}`
           ])
         )          
       }  
@@ -149,12 +178,59 @@ const drawCharacters = (wave: { current: number, max: number }) => {
 }      
 // endregion
 
-export const changeSpritePosition = async() => {
-  const frontLine = spriteRef.filter((u, i) => i < 2)
-  const backLine = spriteRef.filter((u, i) => i > 1 && i < 5)
+/**
+ * Switch sprite position on command "Change"
+ * Frontline to backline vice versa
+ * @param index - The number before change
+ * @returns 
+ */
+export const changeSpritePosition = async(index: number) => {
+  const gameWidth = store.getState().setting.width
+  const gameHeight = store.getState().setting.height
+  const units = JSON.parse(JSON.stringify(store.getState().game.units))
+  const frontLineUnit: Unit[] = []
+  const backLineUnits: Unit[] = []
+  const frontLine : number[][] = [] 
+  const backLine : number[][] = [] 
+  const newPositionRef : GameObj[] = []
+  const enemies = units.splice(5, units.length - 5)
+  playerPositionRef.filter((p, i) => {
+    if(p[0] === 0.7){
+      frontLineUnit.push(units[i])
+      frontLine.push(p)
+    }
+
+    if(p[0] === 0.8){
+      backLineUnits.push(units[i])
+      backLine.push(p)
+      newPositionRef.push(positionRef[0][i])
+    }
+  })
+
+  // Form a new positionRef for player
+  frontLine.forEach((p, i) => {
+    newPositionRef.push(positionRef[0][i])
+  })
+
+  positionRef[0] = newPositionRef
+
+  // Change unit order
+  const newUnitOrder = backLineUnits.concat(frontLineUnit, enemies)
+  console.log('newUnitOrder', newUnitOrder)
+  store.dispatch(
+      setUnits(newUnitOrder)
+  )  
+
+  // Change x axist
+  frontLine.forEach((p) => p[0] = 0.8)
+  backLine.forEach((p) => p[0] = 0.7)
+
+  // Switch order
+  const newOrder: number[][] = backLine.concat(frontLine)
 
   try {
-    frontLine.forEach((s, i) => {
+    newOrder.forEach((p, i) => {
+      const s = spriteRef[i]
       const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
       const newIndex = oldIndex + frontLine.length
 
@@ -162,41 +238,34 @@ export const changeSpritePosition = async() => {
       s.untag(`index_${oldIndex}`)
       s.tag(`index_${newIndex}`)
 
-      const { x, y } = positionRef[0][newIndex].pos
+      const newPosition = [gameWidth * p[0], gameHeight * p[1]]
+
+      tween(
+        positionRef[0][i].pos,
+        vec2(newPosition[0], newPosition[1]),
+        0.5,
+        (pos) => positionRef[0][i].pos = pos,
+        easings.easeInOutQuad
+      )
 
       // Move sprite
       tween(
         s.pos,
-        vec2(x - (128 / 2), y - (128 + 20)),
+        vec2(newPosition[0] - (128 / 2), newPosition[1] - (128 + 20)),
         0.5,
         (pos) => s.pos = pos,
         easings.easeInOutQuad
       )
     })
 
-    backLine.forEach((s, i) => {
-      const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
-      const newIndex = oldIndex - backLine.length
+    // Replace playerPositionRef with the new array
+    playerPositionRef.splice(0, playerPositionRef.length, ...newOrder)
 
-      // Remove & add tag
-      s.untag(`index_${oldIndex}`)
-      s.tag(`index_${newIndex}`)
-
-      const { x, y } = positionRef[0][newIndex].pos
-
-      // Move sprite
-      tween(
-        s.pos,
-        vec2(x - (128 / 2), y - (128 + 20)),
-        0.5,
-        (pos) => s.pos = pos,
-        easings.easeInOutQuad
-      )    
-    })      
-    return true
+    // Return the index after change
+    return (index < frontLine.length)? index + backLine.length : index - frontLine.length 
   } catch (error) {
     console.log('Error occured while changing sprite position ' + error)
-    return false
+    return -1
   }
 }
 
@@ -252,62 +321,9 @@ export default function initGame(){
 
     // Shader
     // Reference from: https://github.com/kaplayjs/kaplay/issues/394
-    // loadShader('outline', null,
-    //   `uniform vec3 u_color;
+    loadShader('waveTransition', null, wave_transition)
 
-    //   vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
-    //       vec4 outlineColor = vec4(vec3(u_color) / 255.0, 1.0);
-    //       vec2 textureSize = vec2(2048, 2048);
-    //       vec4 pixel = texture2D(tex, uv);
-    //       const float EPSILON = 0.0001;
-    //       if(pixel.a < EPSILON)
-    //       {
-    //           vec2 offset = vec2(1.0 / textureSize.x, 0.0);
-    //           float left = texture2D(tex, uv - offset).a;
-    //           float right = texture2D(tex, uv + offset).a;
-          
-    //           offset.x = 0.0;
-    //           offset.y = 1.0 / textureSize.y;
-    //           float up = texture2D(tex, uv - offset).a;
-    //           float down = texture2D(tex, uv + offset).a;
-          
-    //           float a = step(EPSILON, left + right + up + down);
-    //           pixel = mix(pixel, outlineColor, a);
-    //       }
-    //       return pixel;
-    //   }`
-    // )
-
-    loadShader('waveTransition', null,
-      `precision mediump float;
-
-      uniform float u_time;
-
-      vec4 frag(vec2 pos, vec2 uv, vec4 color, sampler2D tex) {
-          float progress = u_time * 0.5;
-
-          // Width of the mask band (0.3 = ~30% of screen width)
-          float bandWidth = 1.0;
-
-          // Jagged shape (random noise via sin)
-          float bands = 20.0;
-          float band = floor(uv.y * bands);
-          float bandOffset = mod(band, 2.0) * 0.05;
-          float jag = sin(uv.y * 100.0 + progress * 10.0) * 0.02;
-
-          // Moving window edges
-          float head = 1.5 - progress + bandOffset + jag;              // right jagged edge
-          float tail = head - bandWidth;                               // left jagged edge
-
-          // Inside the band: draw black
-          if (uv.x > tail && uv.x < head) {
-              return vec4(0.0, 0.0, 0.0, 1.0);
-          }
-
-          // Else: fully transparent
-          return vec4(0.0, 0.0, 0.0, 0.0);
-      }`
-    )
+    setData('changing', false)
 
     bg = add([
       sprite('field'), 
@@ -318,22 +334,13 @@ export default function initGame(){
 
     // Calculate positions when the background is displayed
     wait(1, () => {
-      // Set position rects
-      const playerPositions : GameObj[] = []
-      const enemyPositions : GameObj[] = []
-      const playerPositionRef = [
-        // x, y in percentage
-        [0.7, 0.6], [0.7, 0.7], [0.8, 0.55], [0.8, 0.65], [0.8, 0.75]
-      ]
-      const enemyPositionRef = [
-        // x, y in percentage
-        [0.22, 0.6], [0.22, 0.7], [0.12, 0.55], [0.12, 0.65], [0.12, 0.75]
-      ]
-
       const size = gameWidth * 0.1
+      positionRef.push([]) // playerPositions       
+      positionRef.push([]) // enemyPositions      
 
       for(let i=0; i < 5; i++){
-        playerPositions.push(
+        // playerPositions 
+        positionRef[0].push(
           add([
             pos(gameWidth * playerPositionRef[i][0], gameHeight * playerPositionRef[i][1]),
             rect(size, size),
@@ -342,8 +349,8 @@ export default function initGame(){
             layer('game')
           ])
         )
-
-        enemyPositions.push(
+        // enemyPositions 
+        positionRef[1].push(
           add([
             pos(gameWidth * enemyPositionRef[i][0], gameHeight * enemyPositionRef[i][1]),
             rect(size, size),
@@ -353,9 +360,6 @@ export default function initGame(){
           ])
         )      
       }
-
-      positionRef.push(playerPositions)       
-      positionRef.push(enemyPositions)
       
       drawCharacters(wave)
     })    

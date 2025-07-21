@@ -1,4 +1,4 @@
-@import url('./css/animation.css');
+/* @import url('./css/animation.css'); */
 
 :root{
   --width: 720;
@@ -8,6 +8,8 @@
 body {
   position: relative;
   margin: 0;
+  /* Prevent scroll bar causing element shift */
+  overflow: hidden;
 }
 
 .flex{
