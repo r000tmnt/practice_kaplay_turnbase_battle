@@ -1,8 +1,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useSelector } from "react-redux"
 import k from '../lib/kaplay'
-import store from "../store/store"
-import { positionRef, itemRef, skillRef } from "../scene/game"
+import { positionRef } from "../scene/game"
 
 const { loop } = k
 
@@ -52,39 +51,16 @@ export default function UnitArrow() {
 
     useEffect(() => {
         if(pointedTarget >=0){
-            // If current action is skill
-            if(skillRef.length){
-                const unit = store.getState().game.units[currentActivePlayer]
-                const skill = skillRef.find(s => s.unit.name === unit.name)
-                if(!skill) return
-
-                if(skill.type === 'support'){
-                    setTarget({
-                        position: 0,
-                        index: pointedTarget
-                    })
-                }else{
-                    setTarget({
-                        position: 1,
-                        index: pointedTarget
-                    })
-                }                
-            }
-            
-            if(itemRef.length){
-                const unit = store.getState().game.units[currentActivePlayer]
-                const item = itemRef.find(item => item.unit.name === unit.name)
-                if(!item) return
-
+            if(pointedTarget > 4){
+                setTarget({
+                    position: 1,
+                    index: pointedTarget - 5
+                })   
+            }else{
                 setTarget({
                     position: 0,
                     index: pointedTarget
-                })                
-            }else{
-                setTarget({
-                    position: 1,
-                    index: pointedTarget
-                })                
+                })  
             }
         }else reset()
     }, [pointedTarget])
