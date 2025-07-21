@@ -35,6 +35,15 @@ export default function Command() {
   const [itemList, setItemList] = useState([])
   const dispatch = useDispatch()
 
+  const findAvailableTarget = (start, end) => {
+    for(let i=start; i < end; i++){
+      if(units[i] && units[i].attribute.hp > 0){
+        dispatch(setPointedTarget(i)) 
+        break
+      }
+    }      
+  }
+
   const setAction = (action) => {
     const unit = JSON.parse(JSON.stringify(units[currentActivePlayer]))
     unit.action = action
@@ -121,14 +130,9 @@ export default function Command() {
         spriteHoverEvent.paused = false
         spriteClickEvent.paused = false
         // Find available target
-          for(let i=5; i < 10; i++){
-            if(units[i] && units[i].attribute.hp > 0){
-              dispatch(setPointedTarget(i - 5)) 
-              break
-            }
-          }
-        }
-        break
+        findAvailableTarget(5, 10)
+      }
+      break
       case 'skill': {
         if(payload && 'attribute' in payload){
           skillRef.push({
@@ -136,25 +140,20 @@ export default function Command() {
             ...payload
           })
           spriteHoverEvent.paused = false
-          spriteClickEvent.paused = false     
+          spriteClickEvent.paused = false
           
-          if(payload.type !== 'Support'){ 
-            // Find available target
-            for(let i=5; i < 10; i++){
-              if(units[i] && units[i].attribute.hp > 0){
-                dispatch(setPointedTarget(i - 5)) 
-                break
-              }
-            }      
+          let start, end
+          
+          if(payload.type !== 'Support'){
+            start = 5
+            end = 10 
           }else{
-            // Find available target
-            for(let i=0; i <= 4; i++){
-              if(units[i] && units[i].attribute.hp > 0){
-                dispatch(setPointedTarget(i)) 
-                break
-              }
-            }               
+            start = 0
+            end = 5
           }
+
+          // Find available target
+          findAvailableTarget(start, end)          
         }
       }
         break
@@ -169,12 +168,7 @@ export default function Command() {
           spriteClickEvent.paused = false   
           
           // Find available target
-          for(let i=0; i <= 4; i++){
-            if(units[i] && units[i].attribute.hp > 0){
-              dispatch(setPointedTarget(i)) 
-              break
-            }
-          }             
+          findAvailableTarget(0, 5)          
         }
         break
       case 'defense':{
@@ -294,18 +288,27 @@ export default function Command() {
       case 'skill': {
         const skill = skillRef.find(s => s.unit.name === unit.name)
         if(skill){
-          input.action = function(){ 
-            controller(
-              () => castSkill(unit, units[target], currentActivePlayer, target, skill),
-              currentActivePlayer
-            ) 
+          if(skill.type !== 'Support' && target > 4){
+            input.action = function(){ 
+              controller(
+                () => castSkill(unit, units[target], currentActivePlayer, target, skill),
+                currentActivePlayer
+              ) 
+            }            
+          }else{
+            input.action = function(){ 
+              controller(
+                () => castSkill(unit, units[target], currentActivePlayer, target, skill),
+                currentActivePlayer
+              ) 
+            }              
           }
         }
       }
       break;
       case 'item': {
         const item = itemRef.find(i => i.unit.name === unit.name)
-        if(item){
+        if(item && target < 5){
           input.action = function(){ 
             controller(
               // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -339,23 +342,21 @@ export default function Command() {
 
     switch(units.action){
       case 'attack': {
-        if(target > 4) dispatch(setPointedTarget(target - 5)) 
+        if(target > 4) dispatch(setPointedTarget(target))
       }
       break;
       case 'skill':{
         const skill = skillRef.find(s => s.unit.name === units.name)
         if(skill?.type !== 'Support'){
-          if(target > 4) dispatch(setPointedTarget(target - 5)) 
+          if(target > 4) dispatch(setPointedTarget(target))
         } 
-        else if(target > 4) dispatch(setPointedTarget(target - 5)) 
-        else dispatch(setPointedTarget(target)) 
+        else if(target < 5) dispatch(setPointedTarget(target))  
       }
       break;
       case 'item':{
         const item = itemRef.find(item => item.unit.name === units.name)
         if(item){
-          if(target > 4) dispatch(setPointedTarget(target - 5)) 
-          else dispatch(setPointedTarget(target)) 
+          if(target < 5) dispatch(setPointedTarget(target))
         }
       }
       break;
