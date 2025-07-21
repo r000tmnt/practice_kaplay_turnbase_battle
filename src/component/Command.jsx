@@ -27,6 +27,7 @@ const {
 export default function Command() {
   const units = useSelector(state => state.game.units)
   const gameWidth = useSelector(state => state.setting.width)
+  const uiOffset = useSelector(state => state.setting.uiOffset)
   const inventory = useSelector(state => state.game.inventory)
   const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
   const activeUnits = useSelector(state => state.game.activeUnits)
@@ -400,7 +401,7 @@ export default function Command() {
   return(
     <>
       {/* <div>{units[currentActivePlayer]? units[currentActivePlayer].name : 'null'}</div> */}
-      <div className={`command ui ${currentActivePlayer >= 0 && units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }} >
+      <div className={`command ui ${currentActivePlayer >= 0 && units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }} >
         <div className='avatar'>
           { currentActivePlayer >= 0? units[currentActivePlayer]?.name : '' }
           <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
@@ -441,10 +442,8 @@ export default function Command() {
         </div>
       </div>
 
-      {
-        // Skill menu 
-      }
-      <div className={`skill-list ui ${skillList.length > 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
+      {/* Skill menu */ }
+      <div className={`skill-list ui ${skillList.length > 0? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }}>
         <div className="action">
           { skillList.map((s, index) => {
               if(s)
@@ -477,10 +476,8 @@ export default function Command() {
         }}>BACK</button>
       </div>
 
-      {
-        // Item menu
-      }
-      <div className={`item-list ui ${itemList.length > 0? 'show' : 'hide'}`} style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
+      {/* Item menu */}
+      <div className={`item-list ui ${itemList.length > 0? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }}>
         <div className="action">
           { itemList.map((item, index) => {
               if(item)
@@ -505,7 +502,7 @@ export default function Command() {
 
       <button 
         className={`back ui ${currentActivePlayer >= 0 && showCancel? 'show' : 'hide'}`} 
-        style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}
+        style={{ left: `${uiOffset}px` }}
         onClick={() => cancelAction()}>BACK</button>      
     </>
   )

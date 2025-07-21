@@ -10,10 +10,10 @@ export default function BattleCounter() {
     const turn = useSelector(state => state.game.turn)
     const tension = useSelector(state => state.game.tension)
     const gameWidth = useSelector(state => state.setting.width)
+    const uiOffset = useSelector(state => state.setting.uiOffset)
     const skillName = useSelector(state => state.game.currentCastingSkill)
     const inactiveUnits = useSelector(state => state.game.inactiveUnits)
     const units = useSelector(state => state.game.units)
-    // const scale = useSelector(state => state.setting.scale)
     const wrapperRef = useRef(null)
     const labelRef = useRef(null)
     const dispatch = useDispatch()
@@ -49,7 +49,7 @@ export default function BattleCounter() {
 
     return (
         <div ref={($el) => wrapperRef.current = $el}>
-            <div className="counter flex ui" style={{ left: `${(window.innerWidth - gameWidth) / 2}px` }}>
+            <div className="counter flex ui" style={{ left: `${uiOffset}px` }}>
                 <div>
                     <div className='wave'>
                         WAVE { wave.current }/{ wave.max }
@@ -65,7 +65,7 @@ export default function BattleCounter() {
                 </div>
             </div>
             <div className="flex skill-name ui" 
-                style={{ width: gameWidth + 'px', marginTop: gameWidth * (8/100) + 'px', left: `${(window.innerWidth - gameWidth) / 2}px`, opacity: 0}}
+                style={{ width: gameWidth + 'px', marginTop: gameWidth * (8/100) + 'px', left: `${uiOffset}px`, opacity: 0}}
                 ref={($el) => labelRef.current = $el}>
                 <label>{ skillName }</label>
             </div>        

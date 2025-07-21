@@ -4,7 +4,7 @@ import initGame from './scene/game'
 
 // store
 import { useSelector, useDispatch } from 'react-redux';
-import { setScale } from './store/setting';
+import { setScale, setUIoffset } from './store/setting';
 
 import { stopEverything, waveTransition } from './scene/game';
 
@@ -33,6 +33,10 @@ function App() {
 
     dispatch(
       setScale(value)
+    )
+
+    dispatch(
+      setUIoffset((window.innerWidth - gameWidth) / 2)
     )
     
     document.documentElement.style.setProperty("--scale", value);
