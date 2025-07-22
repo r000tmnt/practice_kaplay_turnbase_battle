@@ -87,6 +87,10 @@ body {
   /* width: 100%; */
 }
 
+.back {
+  position: absolute;
+}
+
 .back, .skill-list, .item-list{
   background-color: black;
   top: unset;
@@ -118,12 +122,12 @@ body {
 }
 
 .hp{
-  background-color: red;
+  /* background-color: red; */
   width: 100%;
 }
 
 .mp {
-  background-color: blue;
+  /* background-color: blue; */
   width: 100%;
 }
 
