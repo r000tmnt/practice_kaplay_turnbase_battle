@@ -100,21 +100,23 @@ const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: nu
     if(units[tIndex] && units[tIndex].attribute.hp === 0){
         // Change target if any
         let nextTarget: Unit | null = null
+        let nextIndex = -1
         for(let i=start; i < end; i++){
             if(units[i] && units[i].attribute.hp > 0){
                 nextTarget = units[i]
+                nextIndex = i
                 break
             }
         }
 
-        return nextTarget
+        return {target: nextTarget, tIndex: nextIndex}
     }else{
-        return target
+        return {target, tIndex}
     }
 }
 
 const showText = ({unit, number, crit, tIndex, attribute}) => {
-    if(!spriteRef[tIndex]) return
+    if(spriteRef[tIndex] === undefined || !spriteRef[tIndex].opacity) return
     // Create text
     const resultText = add([
         text(number, { size: crit? 48 : 36 }),
@@ -189,8 +191,7 @@ const unitLoseHandle = (tIndex: number) => {
             let remain = 0
             // TODO - Need to set the starting number as the length of players
             for(let i=5; i < units.length; i++){
-                // In case if the state is not update yet
-                if(units[i].attribute.hp > 0 && i !== tIndex) remain += 1
+                if(units[i].attribute.hp > 0) remain += 1
             }
 
             if(!remain){
@@ -227,19 +228,20 @@ const unitLoseHandle = (tIndex: number) => {
  * @param {number} tIndex - The index of the enemy unit in the unitSprites array
  */
 export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: number) => {
-    const realTarget: Unit | null  = getAvailableTarget(target, tIndex, 5, 10)
+    const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 5, 10)
 
-    if(!realTarget){
+    if(!realTarget.target){
         // Cancel action
         store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
         return
     }
-
+    target = realTarget.target
+    tIndex = realTarget.tIndex
     console.log('target exist')
 
     const tension = store.getState().game.tension
 
-    let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(realTarget.attribute.def * (realTarget.attribute.def / 100))
+    let dmg = (unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))) - Math.round(target.attribute.def * (target.attribute.def / 100))
     dmg += Math.round(dmg * (tension.current / 100)) // Add tension bonus
 
     const crit = unit.attribute.luck / 100
@@ -256,13 +258,13 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: n
     }
 
     // If the target is in defense action
-    if(realTarget.action === 'defense') dmg = Math.round(dmg / 2)    
+    if(target.action === 'defense') dmg = Math.round(dmg / 2)    
 
-    const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
+    const attribute = JSON.parse(JSON.stringify(target.attribute))
     attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
 
     store.dispatch(
-        updateUnit({ name: realTarget.name, attribute: attribute, action: realTarget.action })
+        updateUnit({ name: target.name, attribute: attribute, action: target.action })
     )
 
     // return showText(unit, dmg, rng, crit, tIndex, attribute)
@@ -287,16 +289,19 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
         // Calculate the number or damage
         wait(0.7, () => {
             if(skill.type !== 'Support'){
-                const realTarget: Unit | null = getAvailableTarget(target, tIndex, 5, 10)
-                if(!realTarget){
+                const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 5, 10)
+
+                if(!realTarget.target){
                     // Cancel action
                     store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
                     return
                 }
+                target = realTarget.target
+                tIndex = realTarget.tIndex
 
                 const tension = store.getState().game.tension
 
-                const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
+                const attribute = JSON.parse(JSON.stringify(target.attribute))
 
                 // 0 means ALL
                 attribute.mp -= (skill.cost.mp && skill.cost.mp === 0)? attribute.mp : skill.cost.mp
@@ -346,23 +351,26 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 }                
 
                 // If the target take defense
-                if(realTarget.action === 'defense') dmg = Math.round(dmg / 2)    
+                if(target.action === 'defense') dmg = Math.round(dmg / 2)    
 
                 attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
                 
                 store.dispatch(
-                    updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
+                    updateUnit({ name: target.name, attribute, action: target.action })
                 )
 
                 // return showText(unit, dmg, rng, crit, tIndex, attribute)    
                 resolve({ unit, number: dmg, crit: rng <= crit, tIndex, attribute })
             }else{
-                const realTarget: Unit | null = getAvailableTarget(target, tIndex, 0, 5)
-                if(!realTarget){
+                const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 0, 5)
+
+                if(!realTarget.target){
                     // Cancel action
                     store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
                     return
                 }
+                target = realTarget.target
+                tIndex = realTarget.tIndex
 
                 // Copy assigned effects
                 const effectTurnCounter = JSON.parse(JSON.stringify(store.getState().game.effectTurnCounter))
@@ -372,7 +380,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
 
                 const tension = store.getState().game.tension
 
-                const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
+                const attribute = JSON.parse(JSON.stringify(target.attribute))
 
                 // 0 means ALL
                 attribute.mp -= skill.cost.mp? skill.cost.mp : attribute.mp
@@ -393,7 +401,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                             }                    
                         }else{
                             // Store the number of turns
-                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: turn + param[1] })
+                            if(param[1] > 0) newEffects.push({ unit: target, turn: turn + param[1] })
                         }
                     })
                 }
@@ -408,7 +416,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                             }                    
                         }else{
                             // Store the number of turns
-                            if(param[1] > 0) newEffects.push({ unit: realTarget, turn: turn + param[1]})
+                            if(param[1] > 0) newEffects.push({ unit: target, turn: turn + param[1]})
                         }
                     })                       
                 }
@@ -419,7 +427,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 )                         
 
                 store.dispatch(
-                    updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
+                    updateUnit({ name: target.name, attribute, action: target.action })
                 )
 
                 resolve({ unit, number, crit: false, tIndex, attribute })    
@@ -437,12 +445,15 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
     return new Promise((resolve, reject) => {
         // Calculate the number or damage
         wait(0.7, () => {
-            const realTarget: Unit | null = getAvailableTarget(target, tIndex, 0, 5)
-            if(!realTarget){
+            const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 0, 5)
+
+            if(!realTarget.target){
                 // Cancel action
                 store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
                 return
             }
+            target = realTarget.target
+            tIndex = realTarget.tIndex
 
             const inventory = JSON.parse(JSON.stringify(store.getState().game.inventory))
 
@@ -450,7 +461,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
 
             const tension = store.getState().game.tension
 
-            const attribute = JSON.parse(JSON.stringify(realTarget.attribute))
+            const attribute = JSON.parse(JSON.stringify(target.attribute))
 
             let number = 0
 
@@ -460,7 +471,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
                     case 'turn':
                         // Store the number of turns
                         if(param[1] > 0){
-                            effectTurnCounter.push({ unit: realTarget, turn: param[1] })     
+                            effectTurnCounter.push({ unit: target, turn: param[1] })     
                             store.dispatch(
                                 updateEffectTurnCounter(effectTurnCounter)
                             )                               
@@ -494,7 +505,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
             )      
 
             store.dispatch(
-                updateUnit({ name: realTarget.name, attribute, action: realTarget.action })
+                updateUnit({ name: target.name, attribute, action: target.action })
             )
 
             if(number > 0) resolve({ unit, number, crit: false, tIndex, attribute })                
