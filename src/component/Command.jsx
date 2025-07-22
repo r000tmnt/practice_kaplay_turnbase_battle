@@ -391,6 +391,7 @@ export default function Command() {
     if(currentActivePlayer < 0){
       setShowCancel(false)
       setSkillList([])
+      setItemList([])
     }
   }, [currentActivePlayer])
 
@@ -401,6 +402,7 @@ export default function Command() {
   return(
     <>
       {/* <div>{units[currentActivePlayer]? units[currentActivePlayer].name : 'null'}</div> */}
+      {/* Linear-gradient: https://stackoverflow.com/a/17353565/14173422 */}
       <div className={`command ui ${currentActivePlayer >= 0 && units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }} >
         <div className='avatar'>
           { currentActivePlayer >= 0? units[currentActivePlayer]?.name : '' }
@@ -408,13 +410,31 @@ export default function Command() {
           <div className='meter'>
             <label>
               HP
-              <div className='bar hp' style={{ width: `${(units[currentActivePlayer]?.attribute.hp / units[currentActivePlayer]?.attribute.maxHp) * 100}%` }}>
+              <div 
+                className='bar hp' 
+                style={{
+                  backgroundImage: `linear-gradient(
+                                      to right, 
+                                      red, 
+                                      red ${(units[currentActivePlayer]?.attribute.hp / units[currentActivePlayer]?.attribute.maxHp) * 100}%,
+                                      transparent ${(units[currentActivePlayer]?.attribute.hp / units[currentActivePlayer]?.attribute.maxHp) * 100}%, 
+                                      transparent 100%)`, 
+                }}>
                 { units[currentActivePlayer]?.attribute.hp }/{ units[currentActivePlayer]?.attribute.maxHp }
               </div>
             </label>
             <label>
               MP
-              <div className='bar mp' style={{ width: `${(units[currentActivePlayer]?.attribute.mp / units[currentActivePlayer]?.attribute.maxMp) * 100}%` }}>
+              <div 
+                className='bar mp' 
+                style={{
+                  backgroundImage: `linear-gradient(
+                                      to right, 
+                                      blue, 
+                                      blue ${(units[currentActivePlayer]?.attribute.mp / units[currentActivePlayer]?.attribute.maxMp) * 100}%,
+                                      transparent ${(units[currentActivePlayer]?.attribute.mp / units[currentActivePlayer]?.attribute.maxMp) * 100}%, 
+                                      transparent 100%)`, 
+                }}>
                 { units[currentActivePlayer]?.attribute.mp }/{ units[currentActivePlayer]?.attribute.maxMp }
               </div>
             </label>
