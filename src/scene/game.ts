@@ -123,7 +123,7 @@ const drawCharacters = (wave: { current: number, max: number }) => {
       if(wave.current > 1){
         const units = store.getState().game.units
         if(!units[index]) break
-        data = JSON.parse(JSON.stringify(units[index]))
+        data = (i === 0 && units[index].attribute.hp === 0)? null : JSON.parse(JSON.stringify(units[index]))
         // Reset action
         if(data) data.action = ''
         if(i > 0 && data){
