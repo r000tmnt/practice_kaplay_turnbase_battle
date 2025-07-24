@@ -1,7 +1,7 @@
 {
   "name": "practice_kaplay_turnbase_battle",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.1",
     "kaplay": "^3001.0.17",
+    "kaplay-atb-plugin": "^0.2.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-redux": "^9.2.0"
