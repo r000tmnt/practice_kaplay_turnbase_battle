@@ -91,21 +91,21 @@ export default function Command() {
   }
 
   const cancelAction = () => {
-    if(units[currentActivePlayer].action === 'attack'){
-      dispatch(
-        updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' })
-      )
-      setShowCancel(false)
-    }
-
-    if(units[currentActivePlayer].action === 'skill'){
-      setShowCancel(false)
-      setAction('skill') // Reset skill list, back to skill menu
-    }
-
-    if(units[currentActivePlayer].action === 'item'){
-      setShowCancel(false)
-      setAction('item') // Reset item list, back to item menu
+    switch(units[currentActivePlayer].action){
+      case 'attack':
+        dispatch(
+          updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' })
+        )
+        setShowCancel(false)
+      break;
+      case 'skill':
+        setShowCancel(false)
+        setAction('skill') // Reset skill list, back to skill menu
+      break;
+      case 'item':
+        setShowCancel(false)
+        setAction('item') // Reset item list, back to item menu
+      break;
     }
   }
 
