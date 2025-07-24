@@ -21,7 +21,6 @@ import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./AT
 
 import skill from '../data/skill.json'
 import { TweenController } from "kaplay";
-import { current } from "@reduxjs/toolkit";
 // import item from '../data/items.json'
 
 // import { skillRef, changeSpritePosition } from "../scene/game";
@@ -137,15 +136,19 @@ const showText = ({unit, number, crit, tIndex, attribute}) => {
         resultText.destroy()
 
         if(attribute.hp === 0) {
-            unitLoseHandle(tIndex)
-            removeBar(tIndex)
+            const activeUnits = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
+            store.dispatch(
+                setActiveUnits(activeUnits.filter((a: number) => a !== tIndex))
+            )
             const currentActivePlayer = store.getState().game.currentActivePlayer
             if(tIndex === currentActivePlayer){
                 // Hide command component
                 store.dispatch(
                     setCurrentActivePlayer(-1)
                 )
-            }
+            }            
+            unitLoseHandle(tIndex)
+            removeBar(tIndex)
         }else{
             store.dispatch(
                 setTension({ current: 1 })
@@ -260,15 +263,14 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: n
     // If the target is in defense action
     if(target.action === 'defense') dmg = Math.round(dmg / 2)    
 
-    const attribute = JSON.parse(JSON.stringify(target.attribute))
-    attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
+    const tragetAttribute = JSON.parse(JSON.stringify(target.attribute))
+    tragetAttribute.hp -= (dmg > tragetAttribute.hp)? tragetAttribute.hp : dmg
 
     store.dispatch(
-        updateUnit({ name: target.name, attribute: attribute, action: target.action })
+        updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
     )
 
-    // return showText(unit, dmg, rng, crit, tIndex, attribute)
-    return { unit, number: dmg, crit: rng <= crit, tIndex, attribute }
+    return { unit, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute }
 }
 
 /**
@@ -301,32 +303,34 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
 
                 const tension = store.getState().game.tension
 
-                const attribute = JSON.parse(JSON.stringify(target.attribute))
-
+                // Deduct MP or tensiiton
                 // 0 means ALL
-                attribute.mp -= (skill.cost.mp && skill.cost.mp === 0)? attribute.mp : skill.cost.mp
+                unit.attribute.mp -= (skill.cost.mp !== undefined)? 
+                                     (skill.cost.mp === 0)? unit.attribute.mp : skill.cost.mp : 0
                 if(skill.cost.tension !== undefined) 
                     store.dispatch(
                         setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
                     )
 
+                const tragetAttribute = JSON.parse(JSON.stringify(target.attribute))
+
                 let dmg = 0
 
                 if(skill.type === 'InFight'){
                     const baseNumber = unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))
-                    const enemyDef = Math.round(attribute.def * (attribute.def / 100))
+                    const enemyDef = Math.round(tragetAttribute.def * (tragetAttribute.def / 100))
                     dmg = baseNumber - enemyDef 
                 }
 
                 if(skill.type === 'GunFight'){
                     const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
-                    const enemyDef = Math.round(attribute.def * (attribute.will / 100))
+                    const enemyDef = Math.round(tragetAttribute.def * (tragetAttribute.will / 100))
                     dmg = baseNumber - enemyDef 
                 }
 
                 if(skill.type === 'Super'){
                     const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100)) + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
-                    const enemyDef = Math.round(attribute.def * (attribute.will / 100)) + Math.round(attribute.def * (attribute.def / 100))
+                    const enemyDef = Math.round(tragetAttribute.def * (tragetAttribute.will / 100)) + Math.round(tragetAttribute.def * (tragetAttribute.def / 100))
                     dmg = baseNumber - enemyDef 
                 }
 
@@ -353,14 +357,14 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 // If the target take defense
                 if(target.action === 'defense') dmg = Math.round(dmg / 2)    
 
-                attribute.hp -= (dmg > attribute.hp)? attribute.hp : dmg
+                tragetAttribute.hp -= (dmg > tragetAttribute.hp)? tragetAttribute.hp : dmg
                 
                 store.dispatch(
-                    updateUnit({ name: target.name, attribute, action: target.action })
+                    updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
                 )
 
                 // return showText(unit, dmg, rng, crit, tIndex, attribute)    
-                resolve({ unit, number: dmg, crit: rng <= crit, tIndex, attribute })
+                resolve({ unit, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute })
             }else{
                 const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 0, 5)
 
@@ -461,7 +465,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
 
             const tension = store.getState().game.tension
 
-            const attribute = JSON.parse(JSON.stringify(target.attribute))
+            const tragetAttribute = JSON.parse(JSON.stringify(target.attribute))
 
             let number = 0
 
@@ -483,8 +487,8 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
                         )                        
                     break;
                     default:
-                        attribute[param[0]] += param[1]
-                        number = attribute[param[0]]
+                        tragetAttribute[param[0]] += param[1]
+                        number = tragetAttribute[param[0]]
                     break;
                 }
             })
@@ -505,10 +509,10 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
             )      
 
             store.dispatch(
-                updateUnit({ name: target.name, attribute, action: target.action })
+                updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
             )
 
-            if(number > 0) resolve({ unit, number, crit: false, tIndex, attribute })                
+            if(number > 0) resolve({ unit, number, crit: false, tIndex, attribute: tragetAttribute })                
         })        
     })
 }
