@@ -8,16 +8,10 @@ import {
 } from "../store/game";
 import { enemyAI } from './battle';
 
-const { 
-    add,
-    wait, 
-    loop, 
-    rect,
-    pos,
-    easings,
-    tween,
-    color,
-    getData
+const {
+    wait,
+    getData,
+    createATB
 } = k
 
 let timers : 
@@ -26,7 +20,8 @@ let timers :
         wrapper?: GameObj,
         bar?: GameObj
         controller: TimerController
-        callBack?: Function | null
+        remove?: Function,
+        pause?: Function
     }[] 
     = []
 
@@ -63,49 +58,19 @@ export const loopConstructor = (index: number, unit: Unit, position: GameObj[][]
         const sideIndex = (index < 5)? index : index - 5                
         const width = gameWidth * 0.1
         const height = (gameWidth * 0.1)/10
-
-        const wrapper = add([
-            rect(width, height),
-            pos(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),       
-            color(0, 0, 0)                            
-        ])
-
-        const time = unit.attribute.act * 100
-
-        let percentage = 0
-        // let count = 0
-
-        const bar = add([
-            rect(percentage, height),
-            pos(position[side][sideIndex].pos.x, position[side][sideIndex].pos.y - (128 / 2) - 10),
-            color(10, 130, 180)                            
-        ])    
-
-        console.log(unit.name, 'set up loop', performance.now())            
+        
+        const newTimer = createATB(
+            unit.attribute.act * 10,
+            width,
+            height,
+            {x: position[side][sideIndex].pos.x, y: position[side][sideIndex].pos.y - (128 / 2) - 10},
+            () => timerEndAction(unit, index),
+        )
 
         timers.push(
             {
                 index,
-                wrapper,
-                bar,
-                callBack,
-                controller: action?
-                action(callBack) :
-                loop(0.1, () => {
-                    const { stopAll } = getStoreState()
-                    if(stopAll){
-                        timerEndAction(unit, index)
-                    }else{
-                        const add = Math.floor(100/time)
-                        percentage = (percentage + add > 100)? 100 : percentage + add
-                        const newWidth = width * (percentage/100)
-                        tween(bar.width, newWidth, 0, (p) => bar.width = p, easings.linear)
-                    }
-                }, time).onEnd(() => {
-                    console.log(`timer ${index} ended`)
-                    if(callBack) { callBack() } 
-                    else timerEndAction(unit, index)
-                })
+                ...newTimer
             }
         )
     })
@@ -150,9 +115,11 @@ export const removeBar = (index: number) => {
     const theTimer = timers.filter(t => t.index === index)
     console.log(`timer ${index} remove`)
     theTimer.forEach(t => {
-        t.controller?.cancel()
-        if(t.wrapper) t.wrapper.destroy()
-        if(t.bar) t.bar.destroy()                    
+        if(t.remove){
+            t.remove()
+        }else{
+            t.controller?.cancel()
+        }                   
     })                           
     // Remove timer
     timers = timers.filter((t) => t.index !== index) 
