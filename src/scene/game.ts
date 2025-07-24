@@ -122,8 +122,8 @@ const drawCharacters = (wave: { current: number, max: number }) => {
 
       if(wave.current > 1){
         const units = store.getState().game.units
-        if(!units[index]) break
-        data = (i === 0 && units[index].attribute.hp === 0)? null : JSON.parse(JSON.stringify(units[index]))
+        if(!units[index] || i === 0 && units[index].attribute.hp === 0) break
+        data = JSON.parse(JSON.stringify(units[index]))
         // Reset action
         if(data) data.action = ''
         if(i > 0 && data){
@@ -170,8 +170,10 @@ const drawCharacters = (wave: { current: number, max: number }) => {
       conditionLoop.cancel()
 
       // Set ATB bars 
-      player.forEach((p, index) => {
-        loopConstructor(index, p, positionRef, null, null)
+      player.forEach((p, i) => {
+        // Get the real index
+        const index = spriteRef[i].tags.find(t => t.includes('index_'))?.split('index_')[1]
+        loopConstructor(Number(index), p, positionRef, null, null)
       })            
     }      
   })
