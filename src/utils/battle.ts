@@ -114,12 +114,23 @@ const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: nu
     }
 }
 
+const getRemainingUnits = (start: number, end: number) => {
+    let remain = 0
+    const units = store.getState().game.units
+
+    for(let i=start; i < end; i++){
+        if(units[i] !== undefined && units[i].attribute.hp > 0) remain += 1
+    }
+
+    return remain
+} 
+
 const showText = ({unit, number, crit, tIndex, attribute}) => {
     if(spriteRef[tIndex] === undefined || !spriteRef[tIndex].opacity) return
     // Create text
     const resultText = add([
-        text(number, { size: crit? 48 : 36, font: 'bebasNeue_regular' }),
-        pos(spriteRef[tIndex].pos.x + (128 / 2), spriteRef[tIndex].pos.y - 10),
+        text(number, { size: crit? 48 : 36, width: 128, align: 'center', font: 'bebasNeue_regular' }),
+        pos(spriteRef[tIndex].pos.x, spriteRef[tIndex].pos.y - 10),
         opacity(1),
         color(crit? YELLOW : WHITE),
     ])
@@ -135,10 +146,6 @@ const showText = ({unit, number, crit, tIndex, attribute}) => {
         resultText.destroy()
 
         if(attribute.hp === 0) {
-            const activeUnits = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
-            store.dispatch(
-                setActiveUnits(activeUnits.filter((a: number) => a !== tIndex))
-            )
             const currentActivePlayer = store.getState().game.currentActivePlayer
             if(tIndex === currentActivePlayer){
                 // Hide command component
@@ -188,15 +195,12 @@ const unitLoseHandle = (tIndex: number) => {
             // Remove the atb bar of the unit
             removeBar(tIndex)
 
-            // TODO - If no more enemy in the scene
-            const units = store.getState().game.units
-            let remain = 0
-            // TODO - Need to set the starting number as the length of players
-            for(let i=5; i < units.length; i++){
-                if(units[i].attribute.hp > 0) remain += 1
-            }
 
-            if(!remain){
+            // If no more enemy in the scene
+            const remainingEnemies = getRemainingUnits(5, 10)
+            const remainingPlayers = getRemainingUnits(0, 5)
+
+            if(!remainingEnemies){
                 // If no more timer
                 if(fadeOutTimers.length === 0){
                     store.dispatch(setAllToStop(true))
@@ -210,15 +214,30 @@ const unitLoseHandle = (tIndex: number) => {
                             const gameWidth = store.getState().setting.width
                             const gameHeight = store.getState().setting.height
                             add([
-                                text("YOU WIN", { size: 128, align: 'center', font: 'bebasNeue_regular' }),
-                                pos((gameWidth / 2) - 128, gameHeight / 2)
+                                text("YOU WIN", { size: 128, align: 'center', width: gameWidth, font: 'bebasNeue_regular' }),
+                                pos(0, (gameHeight / 2) - 128)
                             ])
                         }        
                     })                    
                 }
-            }
+            }  
 
-            console.log('remaining', remain)      
+            if(!remainingPlayers){
+                // If no more timer
+                if(fadeOutTimers.length === 0){
+                    store.dispatch(setAllToStop(true))
+                    // initGame.stopAllUnit()
+                    wait(0.3, () => {
+                        // TODO - End of the battle
+                        const gameWidth = store.getState().setting.width
+                        const gameHeight = store.getState().setting.height
+                        add([
+                            text("YOU LOSE", { size: 128, align: 'center', width: gameWidth, font: 'bebasNeue_regular' }),
+                            pos(0, (gameHeight / 2) - 128)
+                        ])
+                    })                    
+                }      
+            }
         })
 
         fadeOutTimers.push({ index: tIndex, controller: timer })        
@@ -272,7 +291,7 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: n
     tragetAttribute.hp -= (dmg > tragetAttribute.hp)? tragetAttribute.hp : dmg
 
     store.dispatch(
-        updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
+        updateUnit({ name: target.name, attribute: tragetAttribute, action: (tragetAttribute.hp === 0)? '' : target.action })
     )
 
     return { unit, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute }
@@ -367,7 +386,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 
                 // Update target attribute
                 store.dispatch(
-                    updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
+                    updateUnit({ name: target.name, attribute: tragetAttribute, action:(tragetAttribute.hp === 0)? '' : target.action })
                 )
 
                 // Update caster attribute
