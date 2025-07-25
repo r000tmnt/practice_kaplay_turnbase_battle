@@ -49,7 +49,7 @@ const {
     setLayers,
     getLayers,
     layer,
-    // onUpdate,
+    loadFont,
     onDraw,
     shader,
     // outline,
@@ -320,6 +320,10 @@ export default function initGame(){
     // Load sprites
     loadSprite('field', 'bg/nature_2/orig.png')
     loadSprite('player', 'battle/Animations/Defensive_Stance.png')
+
+    // Font
+    const bebasNeue = loadFont('bebasNeue_regular', 'font/BebasNeue-Regular.ttf', { outline: 4 })
+    console.log('bebasNeue', bebasNeue)
 
     // Shader
     // Reference from: https://github.com/kaplayjs/kaplay/issues/394
