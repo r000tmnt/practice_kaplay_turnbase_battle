@@ -118,11 +118,10 @@ const showText = ({unit, number, crit, tIndex, attribute}) => {
     if(spriteRef[tIndex] === undefined || !spriteRef[tIndex].opacity) return
     // Create text
     const resultText = add([
-        text(number, { size: crit? 48 : 36 }),
+        text(number, { size: crit? 48 : 36, font: 'bebasNeue_regular' }),
         pos(spriteRef[tIndex].pos.x + (128 / 2), spriteRef[tIndex].pos.y - 10),
         opacity(1),
         color(crit? YELLOW : WHITE),
-        outline(1, BLACK)
     ])
 
     // Animate the text
@@ -208,6 +207,12 @@ const unitLoseHandle = (tIndex: number) => {
                             store.dispatch(setWave(1))
                         }else{
                             // TODO - End of the battle
+                            const gameWidth = store.getState().setting.width
+                            const gameHeight = store.getState().setting.height
+                            add([
+                                text("YOU WIN", { size: 128, align: 'center', font: 'bebasNeue_regular' }),
+                                pos((gameWidth / 2) - 128, gameHeight / 2)
+                            ])
                         }        
                     })                    
                 }
