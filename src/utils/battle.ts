@@ -305,8 +305,9 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
 
                 // Deduct MP or tensiiton
                 // 0 means ALL
-                unit.attribute.mp -= (skill.cost.mp !== undefined)? 
-                                     (skill.cost.mp === 0)? unit.attribute.mp : skill.cost.mp : 0
+                const caster = JSON.parse(JSON.stringify(unit))
+                caster.attribute.mp -= (skill.cost.mp !== undefined)? 
+                                        (skill.cost.mp === 0)? caster.attribute.mp : skill.cost.mp : 0
                 if(skill.cost.tension !== undefined) 
                     store.dispatch(
                         setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
@@ -317,19 +318,19 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 let dmg = 0
 
                 if(skill.type === 'InFight'){
-                    const baseNumber = unit.attribute.inFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100))
+                    const baseNumber = caster.attribute.inFight + Math.round(caster.attribute.inFight * (caster.attribute.inFight / 100))
                     const enemyDef = Math.round(tragetAttribute.def * (tragetAttribute.def / 100))
                     dmg = baseNumber - enemyDef 
                 }
 
                 if(skill.type === 'GunFight'){
-                    const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
+                    const baseNumber = caster.attribute.gunFight + Math.round(caster.attribute.gunFight * (caster.attribute.gunFight / 100))
                     const enemyDef = Math.round(tragetAttribute.def * (tragetAttribute.will / 100))
                     dmg = baseNumber - enemyDef 
                 }
 
                 if(skill.type === 'Super'){
-                    const baseNumber = unit.attribute.gunFight + Math.round(unit.attribute.inFight * (unit.attribute.inFight / 100)) + Math.round(unit.attribute.gunFight * (unit.attribute.gunFight / 100))
+                    const baseNumber = caster.attribute.gunFight + Math.round(caster.attribute.inFight * (caster.attribute.inFight / 100)) + Math.round(caster.attribute.gunFight * (caster.attribute.gunFight / 100))
                     const enemyDef = Math.round(tragetAttribute.def * (tragetAttribute.will / 100)) + Math.round(tragetAttribute.def * (tragetAttribute.def / 100))
                     dmg = baseNumber - enemyDef 
                 }
@@ -341,7 +342,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 // Add tension bonus 
                 dmg += Math.round(dmg * (tension.current / 100))   
 
-                const crit = unit.attribute.luck / 100
+                const crit = caster.attribute.luck / 100
                 
                 const rng = Math.random()
 
@@ -359,12 +360,17 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
 
                 tragetAttribute.hp -= (dmg > tragetAttribute.hp)? tragetAttribute.hp : dmg
                 
+                // Update target attribute
                 store.dispatch(
                     updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
                 )
 
-                // return showText(unit, dmg, rng, crit, tIndex, attribute)    
-                resolve({ unit, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute })
+                // Update caster attribute
+                store.dispatch(
+                    updateUnit({ name: caster.name, attribute: caster.attribute, action: caster.action })
+                )                
+
+                resolve({ unit: caster, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute })
             }else{
                 const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 0, 5)
 
@@ -384,11 +390,14 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
 
                 const tension = store.getState().game.tension
 
-                const attribute = JSON.parse(JSON.stringify(target.attribute))
+                const tragetAttribute = JSON.parse(JSON.stringify(target.attribute))
 
+                // Deduct MP or tensiiton
                 // 0 means ALL
-                attribute.mp -= skill.cost.mp? skill.cost.mp : attribute.mp
-                if(skill.cost.tension !== undefined)
+                const caster = JSON.parse(JSON.stringify(unit))
+                caster.attribute.mp -= (skill.cost.mp !== undefined)? 
+                                        (skill.cost.mp === 0)? caster.attribute.mp : skill.cost.mp : 0
+                if(skill.cost.tension !== undefined) 
                     store.dispatch(
                         setTension({ current: (skill.cost.tension)? tension.current - skill.cost.tension : 0 })
                     )
@@ -399,9 +408,9 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                     const turn = store.getState().game.turn
                     Object.entries(skill.attribute.buff).forEach((param) => {
                         if(param[0] !== 'turn'){
-                            attribute[param[0]] += Math.round(attribute[param[0]] * param[1])
+                            tragetAttribute[param[0]] += Math.round(tragetAttribute[param[0]] * param[1])
                             if(param[0] == 'hp' || param[0] == 'mp'){
-                                number = Math.round(attribute[param[0]] * param[1])
+                                number = Math.round(tragetAttribute[param[0]] * param[1])
                             }                    
                         }else{
                             // Store the number of turns
@@ -414,9 +423,9 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                     const turn = store.getState().game.turn
                     Object.entries(skill.attribute.debuff).forEach((param) => {
                         if(param[0] !== 'turn'){
-                            attribute[param[0]] -= Math.round(attribute[param[0]] * param[1])
+                            tragetAttribute[param[0]] -= Math.round(tragetAttribute[param[0]] * param[1])
                             if(param[0] == 'hp' || param[0] == 'mp'){
-                                number = Math.round(attribute[param[0]] * param[1])
+                                number = Math.round(tragetAttribute[param[0]] * param[1])
                             }                    
                         }else{
                             // Store the number of turns
@@ -430,11 +439,17 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                     updateEffectTurnCounter([...effectTurnCounter, ...newEffects])
                 )                         
 
+                // Update target attribute
                 store.dispatch(
-                    updateUnit({ name: target.name, attribute, action: target.action })
+                    updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
                 )
 
-                resolve({ unit, number, crit: false, tIndex, attribute })    
+                // Update caster attribute
+                store.dispatch(
+                    updateUnit({ name: caster.name, attribute: caster.attribute, action: caster.action })
+                )       
+
+                resolve({ unit: caster, number, crit: false, tIndex, attribute: tragetAttribute })    
             }
         })        
     })
