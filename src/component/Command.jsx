@@ -321,7 +321,7 @@ export default function Command() {
       }
       break;
     }
-
+    setShowCancel(false)
     dispatch(setPointedTarget(-1))
     spriteHoverEvent.paused = true
     spriteClickEvent.paused = true        
@@ -389,9 +389,9 @@ export default function Command() {
   useEffect(() => {
     console.log('currentActivePlayer update ', currentActivePlayer)
     if(currentActivePlayer < 0){
-      setShowCancel(false)
-      setSkillList([])
-      setItemList([])
+      if(showCancel) setShowCancel(false)
+      if(skillList.length) setSkillList([])
+      if(itemList.length) setItemList([])
     }
   }, [currentActivePlayer])
 
