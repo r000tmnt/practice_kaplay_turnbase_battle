@@ -44,6 +44,7 @@ const {
     area,
     scene, 
     loadSprite, 
+    loadSpriteAtlas,
     loadShader,
     go, 
     setLayers,
@@ -135,7 +136,7 @@ const drawCharacters = (wave: { current: number, max: number }) => {
         data = (i > 0)? unit.enemy[j] : unit.player[j]
       }
 
-      // 128px is the height of the sprite
+      // 67px is the height of the sprite
       // 20px is the height of the rect
       if(data){
         player.push({...data})
@@ -143,7 +144,7 @@ const drawCharacters = (wave: { current: number, max: number }) => {
         spriteRef.push(
           add([
             sprite('player', { flipX: (i > 0)? false : true }), 
-            pos(x - (128 / 2), y - (128 + 20)), 
+            pos(x, y - (67/2)), 
             scale(zoom),
             opacity(1),
             area(),
@@ -153,7 +154,9 @@ const drawCharacters = (wave: { current: number, max: number }) => {
             `index_${index}`,
             `name_${data.name}`
           ])
-        )          
+        )  
+        
+        spriteRef[spriteRef.length - 1].play('idle')
       }  
     }              
   }     
@@ -253,7 +256,7 @@ export const changeSpritePosition = async(index: number) => {
       // Move sprite
       tween(
         s.pos,
-        vec2(newPosition[0] - (128 / 2), newPosition[1] - (128 + 20)),
+        vec2(newPosition[0] - (67 / 2), newPosition[1] - (67 + 20)),
         0.5,
         (pos) => s.pos = pos,
         easings.easeInOutQuad
@@ -319,7 +322,10 @@ export default function initGame(){
   scene('game', () => {
     // Load sprites
     loadSprite('field', 'bg/nature_2/orig.png')
-    loadSprite('player', 'battle/Animations/Defensive_Stance.png')
+    // loadSprite('player', 'battle/Animations/Defensive_Stance_mini.png')
+    const playerSprite = loadSpriteAtlas('battle/Animations/player_spritesheet.png', 'battle/Animations/player_spritesheet.json')
+    console.log('playerSprite', playerSprite)
+
 
     // Font
     const bebasNeue = loadFont('bebasNeue_regular', 'font/BebasNeue-Regular.ttf', { outline: 4 })
