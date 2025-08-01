@@ -19,7 +19,7 @@
         ],
         "anims": {
             "idle": 0,
-            "attack": { "from": 0, "to": 2, "loop": false},
+            "attack": { "from": 6, "to": 8, "loop": false},
             "defense": { "from": 4, "to": 5, "loop": false },
             "hurt": { "from": 1, "to": 3, "loop": false }
         }        
