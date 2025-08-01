@@ -63,7 +63,7 @@ export const loopConstructor = (index: number, unit: Unit, position: GameObj[][]
             unit.attribute.act * 10,
             width,
             height,
-            {x: position[side][sideIndex].pos.x, y: position[side][sideIndex].pos.y - (128 / 2) - 10},
+            {x: position[side][sideIndex].pos.x, y: position[side][sideIndex].pos.y - (67 / 2) - 10},
             () => timerEndAction(unit, index),
         )
 
