@@ -173,6 +173,13 @@ export default function Command() {
         }
         break
       case 'defense':{
+        const uIndex = store.getState().game.units.findIndex(u => u.name === unit.name)
+        spriteRef[uIndex].play('defense', {
+          onEnd: () => {
+            spriteRef[uIndex].frame = 5
+          }
+        })
+        
         const input = {
           action: function(){ 
             controller(
@@ -181,7 +188,6 @@ export default function Command() {
             ) 
           },
           callback: () => {
-            store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
             loopConstructor(currentActivePlayer, unit, positionRef, null, null) 
           }
         }
