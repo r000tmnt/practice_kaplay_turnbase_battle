@@ -4,9 +4,11 @@ import store from "../store/store"
 import { Unit } from '../model/unit'
 import { 
     updateEffectTurnCounter,
-    setActiveUnits
+    setActiveUnits,
+    updateUnit
 } from "../store/game";
 import { enemyAI } from './battle';
+import { spriteRef } from '../scene/game';
 
 const {
     wait,
@@ -146,6 +148,11 @@ const onAtbBarFinished = (unit : Unit, index: number) => {
 
     // Do not set timer on position change
     if(index < 5 && unit.action !== 'change' && changing) return
+
+    if(unit.action === 'defense'){
+        store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+        spriteRef[index].play('idle')
+    }
 
     const copy = JSON.parse(JSON.stringify(store.getState().game.activeUnits))
     copy.push(index)
