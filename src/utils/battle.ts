@@ -129,7 +129,7 @@ const showText = ({unit, number, crit, tIndex, attribute}) => {
     if(spriteRef[tIndex] === undefined || !spriteRef[tIndex].opacity) return
     // Create text
     const resultText = add([
-        text(number, { size: crit? 48 : 36, width: 128, align: 'center', font: 'bebasNeue_regular' }),
+        text(number, { size: crit? 48 : 36, width: 45, align: 'center', font: 'bebasNeue_regular' }),
         pos(spriteRef[tIndex].pos.x, spriteRef[tIndex].pos.y - 10),
         opacity(1),
         color(crit? YELLOW : WHITE),
