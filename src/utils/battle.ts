@@ -125,7 +125,7 @@ const getRemainingUnits = (start: number, end: number) => {
     return remain
 } 
 
-const showText = ({unit, number, crit, tIndex, attribute}) => {
+const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
     if(spriteRef[tIndex] === undefined || !spriteRef[tIndex].opacity) return
     // Create text
     const resultText = add([
@@ -156,10 +156,17 @@ const showText = ({unit, number, crit, tIndex, attribute}) => {
             unitLoseHandle(tIndex)
             removeBar(tIndex)
         }else{
+            if(store.getState().game.units[tIndex].action === 'defense'){
+                spriteRef[tIndex].frame = 5
+            }else{
+                spriteRef[tIndex].frame = 0
+            }
             store.dispatch(
                 setTension({ current: 1 })
             )
-        }        
+        }     
+        
+        spriteRef[uIndex]?.play('idle')          
     })
 }
 
@@ -294,7 +301,18 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: n
         updateUnit({ name: target.name, attribute: tragetAttribute, action: (tragetAttribute.hp === 0)? '' : target.action })
     )
 
-    return { unit, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute }
+    spriteRef[uIndex]?.play('attack')
+    spriteRef[tIndex]?.play('hurt', {
+        onEnd: () => {
+            if(target.action === 'defense'){
+                spriteRef[uIndex].frame = 5
+            }else{
+                spriteRef[uIndex].frame = 0
+            }
+        }
+    }) 
+
+    return { unit, uIndex, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute }
 }
 
 /**
@@ -392,9 +410,19 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 // Update caster attribute
                 store.dispatch(
                     updateUnit({ name: caster.name, attribute: caster.attribute, action: caster.action })
-                )                
-
-                resolve({ unit: caster, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute })
+                )     
+                
+                spriteRef[uIndex]?.play('attack')
+                spriteRef[tIndex]?.play('hurt', {
+                    onEnd: () => {
+                        if(target.action === 'defense'){
+                            spriteRef[uIndex].frame = 5
+                        }else{
+                            spriteRef[uIndex].frame = 0
+                        }
+                    }
+                })
+                resolve({ unit: caster, uIndex, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute })
             }else{
                 const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 0, 5)
 
@@ -473,7 +501,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                     updateUnit({ name: caster.name, attribute: caster.attribute, action: caster.action })
                 )       
 
-                resolve({ unit: caster, number, crit: false, tIndex, attribute: tragetAttribute })    
+                resolve({ unit: caster, uIndex, number, crit: false, tIndex, attribute: tragetAttribute })    
             }
         })        
     })
@@ -551,7 +579,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
                 updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
             )
 
-            if(number > 0) resolve({ unit, number, crit: false, tIndex, attribute: tragetAttribute })                
+            if(number > 0) resolve({ unit, number, uIndex, crit: false, tIndex, attribute: tragetAttribute })                
         })        
     })
 }
