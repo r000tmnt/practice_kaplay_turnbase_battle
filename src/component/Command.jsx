@@ -31,7 +31,6 @@ export default function Command() {
   const inventory = useSelector(state => state.game.inventory)
   const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
   const activeUnits = useSelector(state => state.game.activeUnits)
-  const [showCancel, setShowCancel] = useState(false)
   const [skillList, setSkillList] = useState([])
   const [itemList, setItemList] = useState([])
   const dispatch = useDispatch()
@@ -49,12 +48,11 @@ export default function Command() {
     const unit = JSON.parse(JSON.stringify(units[currentActivePlayer]))
     unit.action = action
     dispatch(
-      updateUnit({ name: unit.name, attribute: unit.attribute, action })
+      updateUnit({ index: unit.index, attribute: unit.attribute, action })
     )
 
     switch(action){
       case 'attack':
-        setShowCancel(true)
         playerAction(action, unit)
       break;
       case 'skill':
@@ -94,16 +92,13 @@ export default function Command() {
     switch(units[currentActivePlayer].action){
       case 'attack':
         dispatch(
-          updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' })
+          updateUnit({ index: units[currentActivePlayer].index, attribute: units[currentActivePlayer].attribute, action: '' })
         )
-        setShowCancel(false)
       break;
       case 'skill':
-        setShowCancel(false)
         setAction('skill') // Reset skill list, back to skill menu
       break;
       case 'item':
-        setShowCancel(false)
         setAction('item') // Reset item list, back to item menu
       break;
     }
@@ -117,9 +112,9 @@ export default function Command() {
     dispatch(setCurrentActivePlayer(-1))
     // Reset action value
     dispatch(
-      updateUnit({ name: unit.name, attribute: unit.attribute, action: '' })
+      updateUnit({ index: unit.index, attribute: unit.attribute, action: '' })
     )     
-    unit.action = ''       
+    unit.action = ''
     if(loop) loopConstructor(currentActivePlayer, unit, positionRef, null, null)
   }
   // region Player Action
@@ -173,7 +168,7 @@ export default function Command() {
         }
         break
       case 'defense':{
-        const uIndex = store.getState().game.units.findIndex(u => u.name === unit.name)
+        const uIndex = unit.index
         spriteRef[uIndex].play('defense', {
           onEnd: () => {
             spriteRef[uIndex].frame = 5
@@ -263,7 +258,8 @@ export default function Command() {
     
     // Get the index of the clicked sprite
     const tag = sprite.tags.find((tag) => tag.includes('index_'));
-    const target = tag ? Number(tag.split('_')[1]) : -1;
+    const tIndex = tag ? Number(tag.split('index_')[1]) : -1;
+    const target = store.getState().game.units.find(u => u.index === tIndex)
 
     if(unit && !unit.action.length) {
       console.log('unit action lost', unit)
@@ -282,10 +278,10 @@ export default function Command() {
 
     switch(unit.action){
       case 'attack':{
-        if(Number(target) > 4){
+        if(tIndex > 4){
           input.action = function(){ 
             controller(
-              () => attack(unit, units[target], currentActivePlayer, target), 
+              () => attack(unit, target, currentActivePlayer, tIndex), 
               currentActivePlayer
             ) 
           }        
@@ -295,17 +291,17 @@ export default function Command() {
       case 'skill': {
         const skill = skillRef.find(s => s.unit.name === unit.name)
         if(skill){
-          if(skill.type !== 'Support' && target > 4){
+          if(skill.type !== 'Support' && tIndex > 4){
             input.action = function(){ 
               controller(
-                () => castSkill(unit, units[target], currentActivePlayer, target, skill),
+                () => castSkill(unit, target, currentActivePlayer, tIndex, skill),
                 currentActivePlayer
               ) 
             }            
           }else{
             input.action = function(){ 
               controller(
-                () => castSkill(unit, units[target], currentActivePlayer, target, skill),
+                () => castSkill(unit, target, currentActivePlayer, tIndex, skill),
                 currentActivePlayer
               ) 
             }              
@@ -315,11 +311,11 @@ export default function Command() {
       break;
       case 'item': {
         const item = itemRef.find(i => i.unit.name === unit.name)
-        if(item && target < 5){
+        if(item && tIndex < 5){
           input.action = function(){ 
             controller(
               // eslint-disable-next-line react-hooks/rules-of-hooks
-              () => useItem(unit, units[target], currentActivePlayer, target, item),
+              () => useItem(unit, target, currentActivePlayer, tIndex, item),
               currentActivePlayer
             ) 
           }
@@ -327,7 +323,6 @@ export default function Command() {
       }
       break;
     }
-    setShowCancel(false)
     dispatch(setPointedTarget(-1))
     spriteHoverEvent.paused = true
     spriteClickEvent.paused = true        
@@ -383,7 +378,7 @@ export default function Command() {
       if(next >= 0){
         console.log('Set the next acting player ', next)
         console.log('activeUnits ', activeUnits)
-        const unit = store.getState().game.units[next]
+        const unit = store.getState().game.units.find(u => u.index === next)
         // Update unit state only when the action value is empty
         if(unit && !unit.action.length) dispatch(setCurrentActivePlayer(next))
         // else dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''}))
@@ -395,7 +390,6 @@ export default function Command() {
   useEffect(() => {
     console.log('currentActivePlayer update ', currentActivePlayer)
     if(currentActivePlayer < 0){
-      if(showCancel) setShowCancel(false)
       if(skillList.length) setSkillList([])
       if(itemList.length) setItemList([])
     }
@@ -409,7 +403,7 @@ export default function Command() {
     <>
       {/* <div>{units[currentActivePlayer]? units[currentActivePlayer].name : 'null'}</div> */}
       {/* Linear-gradient: https://stackoverflow.com/a/17353565/14173422 */}
-      <div className={`command ui ${currentActivePlayer >= 0 && units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }} >
+      <div className={`command ui ${units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }} >
         <div className='avatar'>
           { currentActivePlayer >= 0? units[currentActivePlayer]?.name : '' }
           <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
@@ -476,7 +470,6 @@ export default function Command() {
                 return (
                   <button key={index} className={`skill-item ${units[currentActivePlayer] !== undefined && units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
                   onClick={() => {
-                    setShowCancel(true)
                     playerAction('skill', units[currentActivePlayer], s)
                     setSkillList([])
                   }}>
@@ -497,7 +490,7 @@ export default function Command() {
         </div>
         <button className="back" style={{ width: '100%' }}
         onClick={() => {
-          dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))
+          dispatch(updateUnit({ index: units[currentActivePlayer].index, attribute: units[currentActivePlayer].attribute, action: '' }))
           setSkillList([])
         }}>BACK</button>
       </div>
@@ -509,7 +502,6 @@ export default function Command() {
               if(item)
                 return (
                   <button key={index} className={`item`} onClick={() => {
-                    setShowCancel(true)
                     playerAction('item', units[currentActivePlayer], item)
                     setItemList([])
                   }}>
@@ -521,13 +513,13 @@ export default function Command() {
         </div>
         <button className="back" style={{ width: '100%' }}
         onClick={() => {
-          dispatch(updateUnit({ name: units[currentActivePlayer].name, attribute: units[currentActivePlayer].attribute, action: '' }))
+          dispatch(updateUnit({ index: units[currentActivePlayer].index, attribute: units[currentActivePlayer].attribute, action: '' }))
           setItemList([])
         }}>BACK</button>
       </div>
 
       <button 
-        className={`back ui ${currentActivePlayer >= 0 && showCancel? 'show' : 'hide'}`} 
+        className={`back ui ${currentActivePlayer >= 0 && units[currentActivePlayer].action === 'attack'? 'show' : 'hide'}`} 
         style={{ left: `${uiOffset}px` }}
         onClick={() => cancelAction()}>BACK</button>      
     </>
