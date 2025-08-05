@@ -20,7 +20,7 @@ import { positionRef, spriteRef } from "../scene/game";
 import { loopConstructor, waitConstructor, pauseOrResume, removeBar } from "./ATB";
 
 import skill from '../data/skill.json'
-import { TweenController } from "kaplay";
+import { GameObj, TweenController } from "kaplay";
 // import item from '../data/items.json'
 
 // import { skillRef, changeSpritePosition } from "../scene/game";
@@ -62,12 +62,13 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
 
         if(typeof result === "number" && result >= 0){
             // Reset timers
-            const units = store.getState().game.units
-            if(units[result].action === 'change'){
+            const unit = store.getState().game.units.find(u => u.index === result)
+            if(unit && unit.action === 'change'){
+                const units = store.getState().game.units
                 const turn = store.getState().game.turn
                 store.dispatch(setTurn(turn + 1))
                 setData('changing', false)
-                store.dispatch(updateUnit({name: units[result].name, attribute: units[result].attribute, action: ''})) 
+                store.dispatch(updateUnit({index: unit.index, attribute: unit.attribute, action: ''})) 
                 // Get players on the field
                 const remain : number[] = Array.from([0, 1, 2, 3, 4]).filter(i => units[i].attribute.hp > 0)
                 remain.forEach(i => loopConstructor(i, units[i], positionRef, null, null))
@@ -94,16 +95,17 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
 const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: number) => {
     // Get latest state
     const units = store.getState().game.units
+    const unit = units.find(u => u.index === tIndex)
 
     // Check if the target is in the field
-    if(units[tIndex] && units[tIndex].attribute.hp === 0){
+    if(unit && unit.attribute.hp === 0){
         // Change target if any
         let nextTarget: Unit | null = null
         let nextIndex = -1
         for(let i=start; i < end; i++){
             if(units[i] && units[i].attribute.hp > 0){
                 nextTarget = units[i]
-                nextIndex = i
+                nextIndex = nextTarget.index?? i
                 break
             }
         }
@@ -125,12 +127,22 @@ const getRemainingUnits = (start: number, end: number) => {
     return remain
 } 
 
+const getSprite = (target: number) => {
+    // Find the sprite
+    return spriteRef.find(s => {
+        const index = s.tags.find(t => t.includes('index_'))?.split('index_')[1]
+        return Number(index) === target
+    })
+}
+
 const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
-    if(spriteRef[tIndex] === undefined || !spriteRef[tIndex].opacity) return
+    // Find the sprite
+    const sprite = getSprite(tIndex)
+    if(sprite === undefined || !sprite.opacity) return
     // Create text
     const resultText = add([
-        text(number, { size: crit? 48 : 36, width: 45, align: 'center', font: 'bebasNeue_regular' }),
-        pos(spriteRef[tIndex].pos.x, spriteRef[tIndex].pos.y - 10),
+        text(number, { size: crit? 48 : 36, align: 'center', font: 'bebasNeue_regular' }),
+        pos(sprite.pos.x, sprite.pos.y - 10),
         opacity(1),
         color(crit? YELLOW : WHITE),
     ])
@@ -147,49 +159,47 @@ const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
 
         if(attribute.hp === 0) {
             const currentActivePlayer = store.getState().game.currentActivePlayer
+            const activeUnits = store.getState().game.activeUnits
+
+            store.dispatch(
+                setActiveUnits(activeUnits.filter(a => a !== tIndex))
+            )            
+
             if(tIndex === currentActivePlayer){
                 // Hide command component
                 store.dispatch(
                     setCurrentActivePlayer(-1)
                 )
-            }            
-            unitLoseHandle(tIndex)
+            }
+            unitLoseHandle(tIndex, sprite)
             removeBar(tIndex)
         }else{
-            if(store.getState().game.units[tIndex].action === 'defense'){
-                spriteRef[tIndex].frame = 5
-            }else{
-                spriteRef[tIndex].frame = 0
+            const unit = store.getState().game.units.find(u => u.index === tIndex)
+            if(unit && unit.action === 'defense'){
+                sprite.frame = 5
             }
             store.dispatch(
                 setTension({ current: 1 })
             )
-        }     
-        
-        spriteRef[uIndex]?.play('idle')          
+        }       
     })
 }
 
-const unitLoseHandle = (tIndex: number) => {
+const unitLoseHandle = (tIndex: number, sprite: GameObj) => {
     // TODO - Unit lose animation
     store.dispatch(
         setTension({ current: 5 })
     )
 
     // Get the latest state
-    const activeUnits = store.getState().game.activeUnits
     const wave = store.getState().game.wave
-
-    store.dispatch(
-        setActiveUnits(activeUnits.filter(a => a !== tIndex))
-    )
 
     try {
         const timer = tween(
-            spriteRef[tIndex].opacity, 
+            sprite.opacity, 
             0, 
             0.5,
-            (o) => spriteRef[tIndex].opacity = o, 
+            (o) => sprite.opacity = o, 
             easings.linear
         )
         
@@ -197,11 +207,10 @@ const unitLoseHandle = (tIndex: number) => {
             // Remove timer
             fadeOutTimers = fadeOutTimers.filter(t => t.index !== tIndex)
             // Remove sprite
-            spriteRef[tIndex].destroy()
+            sprite.destroy()
 
             // Remove the atb bar of the unit
             removeBar(tIndex)
-
 
             // If no more enemy in the scene
             const remainingEnemies = getRemainingUnits(5, 10)
@@ -266,7 +275,7 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: n
 
     if(!realTarget.target){
         // Cancel action
-        store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+        store.dispatch(updateUnit({index: unit.index, attribute: unit.attribute, action: ''})) 
         return
     }
     target = realTarget.target
@@ -298,16 +307,21 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: n
     tragetAttribute.hp -= (dmg > tragetAttribute.hp)? tragetAttribute.hp : dmg
 
     store.dispatch(
-        updateUnit({ name: target.name, attribute: tragetAttribute, action: (tragetAttribute.hp === 0)? '' : target.action })
+        updateUnit({ index: target.index, attribute: tragetAttribute, action: (tragetAttribute.hp === 0)? '' : target.action })
     )
 
-    spriteRef[uIndex]?.play('attack')
-    spriteRef[tIndex]?.play('hurt', {
+    const playerSprite = getSprite(uIndex)
+    const enemySprite = getSprite(tIndex)
+
+    playerSprite?.play('attack', {
+        onEnd: () => {
+            playerSprite?.play('idle')
+        }
+    })
+    enemySprite?.play('hurt', {
         onEnd: () => {
             if(target.action === 'defense'){
-                spriteRef[uIndex].frame = 5
-            }else{
-                spriteRef[uIndex].frame = 0
+                if(enemySprite) enemySprite.frame = 5
             }
         }
     }) 
@@ -337,7 +351,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
 
                 if(!realTarget.target){
                     // Cancel action
-                    store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+                    store.dispatch(updateUnit({index: unit.index, attribute: unit.attribute, action: ''})) 
                     return
                 }
                 target = realTarget.target
@@ -404,31 +418,36 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                 
                 // Update target attribute
                 store.dispatch(
-                    updateUnit({ name: target.name, attribute: tragetAttribute, action:(tragetAttribute.hp === 0)? '' : target.action })
+                    updateUnit({ index: target.index, attribute: tragetAttribute, action:(tragetAttribute.hp === 0)? '' : target.action })
                 )
 
                 // Update caster attribute
                 store.dispatch(
-                    updateUnit({ name: caster.name, attribute: caster.attribute, action: caster.action })
+                    updateUnit({ index: caster.index, attribute: caster.attribute, action: caster.action })
                 )     
                 
-                spriteRef[uIndex]?.play('attack')
-                spriteRef[tIndex]?.play('hurt', {
+                const playerSprite = getSprite(uIndex)
+                const enemySprite = getSprite(tIndex)
+
+                playerSprite?.play('attack', {
                     onEnd: () => {
-                        if(target.action === 'defense'){
-                            spriteRef[uIndex].frame = 5
-                        }else{
-                            spriteRef[uIndex].frame = 0
-                        }
+                        playerSprite?.play('idle')
                     }
                 })
+                enemySprite?.play('hurt', {
+                    onEnd: () => {
+                        if(target.action === 'defense'){
+                            if(enemySprite) enemySprite.frame = 5
+                        }
+                    }
+                }) 
                 resolve({ unit: caster, uIndex, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute })
             }else{
                 const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 0, 5)
 
                 if(!realTarget.target){
                     // Cancel action
-                    store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+                    store.dispatch(updateUnit({index: unit.index, attribute: unit.attribute, action: ''})) 
                     return
                 }
                 target = realTarget.target
@@ -493,12 +512,12 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
 
                 // Update target attribute
                 store.dispatch(
-                    updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
+                    updateUnit({ index: target.index, attribute: tragetAttribute, action: target.action })
                 )
 
                 // Update caster attribute
                 store.dispatch(
-                    updateUnit({ name: caster.name, attribute: caster.attribute, action: caster.action })
+                    updateUnit({ index: caster.index, attribute: caster.attribute, action: caster.action })
                 )       
 
                 resolve({ unit: caster, uIndex, number, crit: false, tIndex, attribute: tragetAttribute })    
@@ -520,7 +539,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
 
             if(!realTarget.target){
                 // Cancel action
-                store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+                store.dispatch(updateUnit({index: unit.index, attribute: unit.attribute, action: ''})) 
                 return
             }
             target = realTarget.target
@@ -576,7 +595,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
             )      
 
             store.dispatch(
-                updateUnit({ name: target.name, attribute: tragetAttribute, action: target.action })
+                updateUnit({ index: target.index, attribute: tragetAttribute, action: target.action })
             )
 
             if(number > 0) resolve({ unit, number, uIndex, crit: false, tIndex, attribute: tragetAttribute })                
@@ -622,7 +641,7 @@ export const enemyAI = (unit: Unit, index: number) => {
 
     // Keep tracking action
     store.dispatch(
-        updateUnit({ name: unit.name, attribute: unit.attribute, action })
+        updateUnit({ index: unit.index, attribute: unit.attribute, action })
     )
 
     // TODO - Call the action
