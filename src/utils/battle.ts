@@ -141,8 +141,8 @@ const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
     if(sprite === undefined || !sprite.opacity) return
     // Create text
     const resultText = add([
-        text(number, { size: crit? 48 : 36, align: 'center', font: 'bebasNeue_regular' }),
-        pos(sprite.pos.x, sprite.pos.y - 10),
+        text(number, { size: crit? 48 : 36, width: 128, align: 'center', font: 'bebasNeue_regular' }),
+        pos(sprite.pos.x - ((128 - 45) / 2), sprite.pos.y - 10),
         opacity(1),
         color(crit? YELLOW : WHITE),
     ])
