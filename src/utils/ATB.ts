@@ -54,8 +54,6 @@ export const loopConstructor = (index: number, unit: Unit, position: GameObj[][]
 
         if(activeUnits.find(a => a === index)) return
 
-        if(timers.find((t) => t.index === index)) return
-
         const side = (index < 5)? 0 : 1
         const sideIndex = (index < 5)? index : index - 5                
         const width = gameWidth * 0.1
@@ -150,7 +148,7 @@ const onAtbBarFinished = (unit : Unit, index: number) => {
     if(index < 5 && unit.action !== 'change' && changing) return
 
     if(unit.action === 'defense'){
-        store.dispatch(updateUnit({name: unit.name, attribute: unit.attribute, action: ''})) 
+        store.dispatch(updateUnit({index: unit.index, attribute: unit.attribute, action: ''})) 
         spriteRef[index].play('idle')
     }
 
