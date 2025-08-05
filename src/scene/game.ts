@@ -122,11 +122,19 @@ const drawCharacters = (wave: { current: number, max: number }) => {
       const index = (i > 0)? j + 5 : j
 
       if(wave.current > 1){
-        const units = store.getState().game.units
-        if(!units[index] || i === 0 && units[index].attribute.hp === 0) break
-        data = JSON.parse(JSON.stringify(units[index]))
-        // Reset action
-        if(data) data.action = ''
+        const units : Unit[] = store.getState().game.units
+        if(i === 0){
+          if(units[index].attribute.hp > 0) data = JSON.parse(JSON.stringify(units[index]))
+        }else{
+          data = JSON.parse(JSON.stringify(units[index]))
+        }
+        
+        if(data){
+          // Reset action
+          data.action = ''
+          // Keep index for reference
+          data.index = index
+        }
         if(i > 0 && data){
           // Refill the hp and mp of the enemy
           data.attribute.hp = data.attribute.maxHp
@@ -134,6 +142,8 @@ const drawCharacters = (wave: { current: number, max: number }) => {
         }
       }else{
         data = (i > 0)? unit.enemy[j] : unit.player[j]
+        // Keep index for reference
+        data.index = index
       }
 
       // 67px is the height of the sprite
