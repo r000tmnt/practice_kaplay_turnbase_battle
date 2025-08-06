@@ -138,7 +138,10 @@ const getSprite = (target: number) => {
 const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
     // Find the sprite
     const sprite = getSprite(tIndex)
-    if(sprite === undefined || !sprite.opacity) return
+    if(sprite === undefined || !sprite.opacity){
+        console.log('target sprite not found or destoryed', tIndex, sprite)
+        return
+    }
     // Create text
     const resultText = add([
         text(number, { size: crit? 48 : 36, width: 128, align: 'center', font: 'bebasNeue_regular' }),
@@ -158,6 +161,7 @@ const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
         resultText.destroy()
 
         if(attribute.hp === 0) {
+            console.log('Removing sprite', tIndex)
             const currentActivePlayer = store.getState().game.currentActivePlayer
             const activeUnits = store.getState().game.activeUnits
 
