@@ -13,6 +13,9 @@ import BattleCounter from './component/BattleCounter';
 import UnitArrow from './component/UnitArrow';
 import Command from './component/Command';
 
+// capacitor plugin
+import { Device } from '@capacitor/device';
+
 // Game init
 initGame()
 
@@ -35,6 +38,9 @@ function App() {
       setScale(value)
     )
 
+    console.log('window.innerHeight', window.innerHeight)
+    console.log('gameHeight', gameHeight)
+
     dispatch(
       setUIoffset({
         v: (window.innerWidth - gameWidth) / 2,
@@ -49,6 +55,10 @@ function App() {
     window.addEventListener('resize', scaleUI)
     // Fire the function on the first time
     scaleUI()
+
+    Device.getInfo().then((info) => {
+        console.log(info);
+    });
 
     // Cleanup: Remove event listener on component unmount
     return () => {
