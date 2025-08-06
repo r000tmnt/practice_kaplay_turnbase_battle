@@ -6,14 +6,17 @@ const settingSlice = createSlice({
         width: 720,
         height: 1280,
         scale: 0,
-        uiOffset: 0,
+        uiOffsetV: 0,
+        uiOffsetH: 0,
     },
     reducers : {
         setScale: (state, action) => {
             state.scale = action.payload
         },
         setUIoffset: (state, action) => {
-            state.uiOffset = action.payload
+            const { v, h } = action.payload
+            state.uiOffsetV = v
+            state.uiOffsetH = h
         }
     }
 })

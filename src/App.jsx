@@ -36,7 +36,10 @@ function App() {
     )
 
     dispatch(
-      setUIoffset((window.innerWidth - gameWidth) / 2)
+      setUIoffset({
+        v: (window.innerWidth - gameWidth) / 2,
+        h: (window.innerHeight > gameHeight)? (window.innerHeight - gameHeight) / 2 : 0
+      })
     )
     
     document.documentElement.style.setProperty("--scale", value);
