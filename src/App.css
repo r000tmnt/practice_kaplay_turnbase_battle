@@ -29,7 +29,7 @@ body {
 
 .ui {
   position: absolute;
-  top: 0;
+  /* top: 0; */
   /*left: 50%; */
   width: calc(var(--width) * 1px);
   /* height: calc(var(--height) * 1px); */
@@ -81,7 +81,7 @@ body {
   transition: all 0.3s ease-in-out;
   position: fixed;
   top: unset;
-  bottom: 0;
+  /* bottom: 0; */
   transform-origin: bottom;
   /* transform: translate(-50%, 22%) scale(var(--scale, 0)); */
   /* width: 100%; */
@@ -94,7 +94,7 @@ body {
 .back, .skill-list, .item-list{
   background-color: black;
   top: unset;
-  bottom: 0;
+  /* bottom: 0; */
   transform-origin: bottom;
   transition: all 0.3s ease-in-out;
 }
