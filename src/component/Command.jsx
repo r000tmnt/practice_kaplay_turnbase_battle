@@ -27,7 +27,8 @@ const {
 export default function Command() {
   const units = useSelector(state => state.game.units)
   const gameWidth = useSelector(state => state.setting.width)
-  const uiOffset = useSelector(state => state.setting.uiOffset)
+  const uiOffsetV = useSelector(state => state.setting.uiOffsetV)
+  const uiOffsetH = useSelector(state => state.setting.uiOffsetH)
   const inventory = useSelector(state => state.game.inventory)
   const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
   const activeUnits = useSelector(state => state.game.activeUnits)
@@ -403,7 +404,7 @@ export default function Command() {
     <>
       {/* <div>{units[currentActivePlayer]? units[currentActivePlayer].name : 'null'}</div> */}
       {/* Linear-gradient: https://stackoverflow.com/a/17353565/14173422 */}
-      <div className={`command ui ${units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }} >
+      <div className={`command ui ${units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${uiOffsetV}px`, bottom: `${uiOffsetH}px` }} >
         <div className='avatar'>
           { currentActivePlayer >= 0? units[currentActivePlayer]?.name : '' }
           <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
@@ -463,7 +464,7 @@ export default function Command() {
       </div>
 
       {/* Skill menu */ }
-      <div className={`skill-list ui ${skillList.length > 0? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }}>
+      <div className={`skill-list ui ${skillList.length > 0? 'show' : 'hide'}`} style={{ left: `${uiOffsetV}px`, bottom: `${uiOffsetH}px` }}>
         <div className="action">
           { skillList.map((s, index) => {
               if(s)
@@ -496,7 +497,7 @@ export default function Command() {
       </div>
 
       {/* Item menu */}
-      <div className={`item-list ui ${itemList.length > 0? 'show' : 'hide'}`} style={{ left: `${uiOffset}px` }}>
+      <div className={`item-list ui ${itemList.length > 0? 'show' : 'hide'}`} style={{ left: `${uiOffsetV}px`, bottom: `${uiOffsetH}px` }}>
         <div className="action">
           { itemList.map((item, index) => {
               if(item)
@@ -520,7 +521,7 @@ export default function Command() {
 
       <button 
         className={`back ui ${currentActivePlayer >= 0 && units[currentActivePlayer].action === 'attack'? 'show' : 'hide'}`} 
-        style={{ left: `${uiOffset}px` }}
+        style={{ left: `${uiOffsetV}px`, bottom: `${uiOffsetH}px` }}
         onClick={() => cancelAction()}>BACK</button>      
     </>
   )
