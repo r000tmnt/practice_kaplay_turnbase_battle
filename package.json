@@ -1,7 +1,7 @@
 {
   "name": "practice_kaplay_turnbase_battle",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@capacitor/android": "^7.4.2",
     "@capacitor/core": "^7.4.2",
+    "@capacitor/device": "^7.0.2",
     "@reduxjs/toolkit": "^2.8.1",
     "kaplay": "^3001.0.17",
     "kaplay-atb-plugin": "^0.2.0",
