@@ -28,7 +28,7 @@ function App() {
 
   // #region Scale UI
   // Reference from: https://jslegenddev.substack.com/p/how-to-display-an-html-based-ui-on
-  const scaleUI = () => {
+  const scaleUI = (info = null) => {
     const value = Math.min(
       window.innerWidth / gameWidth,
       window.innerHeight / gameHeight
@@ -41,23 +41,37 @@ function App() {
     console.log('window.innerHeight', window.innerHeight)
     console.log('gameHeight', gameHeight)
 
-    dispatch(
-      setUIoffset({
-        v: (window.innerWidth - gameWidth) / 2,
-        h: (window.innerHeight > gameHeight)? (window.innerHeight - gameHeight) / 2 : 0
-      })
-    )
+    if(info.platform === 'android' || info.platform === 'ios'){
+      // const scaleW = gameWidth * value
+      const scaleH = gameHeight * value
+      dispatch(
+        setUIoffset({
+          v: (window.innerWidth - gameWidth) / 2,
+          h: (window.innerHeight > scaleH)? (window.innerHeight - scaleH) / 2 : 0
+        })
+      )
+    }else{
+      dispatch(
+        setUIoffset({
+          v: (window.innerWidth - gameWidth) / 2,
+          h: (window.innerHeight > gameHeight)? (window.innerHeight - gameHeight) / 2 : 0
+        })
+      )      
+    }
+
+
     
     document.documentElement.style.setProperty("--scale", value);
   }
 
   useEffect(() => {
     window.addEventListener('resize', scaleUI)
-    // Fire the function on the first time
-    scaleUI()
 
     Device.getInfo().then((info) => {
         console.log(info);
+
+      // Fire the function on the first time
+      scaleUI(info)        
     });
 
     // Cleanup: Remove event listener on component unmount
