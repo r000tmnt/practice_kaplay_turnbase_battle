@@ -341,7 +341,7 @@ export default function initGame(){
 
     // Shader
     // Reference from: https://github.com/kaplayjs/kaplay/issues/394
-    const wave_transition = await loadFragmentShader(`http://${window.location.host}/shaders/wave_transition.frag`)   
+    const wave_transition = await loadFragmentShader(`shaders/wave_transition.frag`)   
     console.log('wave_transition', wave_transition) 
     loadShader('waveTransition', null, wave_transition)
 
