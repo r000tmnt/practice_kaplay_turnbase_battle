@@ -7,7 +7,8 @@ const { loop } = k
 
 export default function UnitArrow() {
     const gameWidth = useSelector(state => state.setting.width)
-    const scale = useSelector(state => state.setting.scale)  
+    const scale = useSelector(state => state.setting.scale)
+    const uiOffsetH = useSelector(state => state.setting.uiOffsetH)
     const currentActivePlayer = useSelector(state => state.game.currentActivePlayer)
     const pointedTarget = useSelector(state => state.game.pointedTarget)
     const [target, setTarget] = useState({})
@@ -85,13 +86,14 @@ export default function UnitArrow() {
                 style={{
                     width: `${(gameWidth * 0.05) * scale}px`,
                     fontSize: `${(gameWidth * 0.05) * scale}px`,
-                    left: `${((window.innerWidth - (gameWidth * scale)) / 2)}px`,            
+                    top: `${uiOffsetH}px`,
+                    left: `${((window.innerWidth - (gameWidth * scale)) / 2)}px`,
                     transform: `
                         translate(
                             ${(positionRef[target.position][target.index].pos.x + ((gameWidth * 0.05)/4)) * scale}px, 
                             ${(positionRef[target.position][target.index].pos.y - (128 / 2) - 40) * scale}px)
                     `,
-                }}>&#11167;</div>
+                }}>⮟</div>
                 : null
             }
         </>
