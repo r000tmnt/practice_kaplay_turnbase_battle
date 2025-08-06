@@ -33,8 +33,6 @@ const loadFragmentShader = async(path: string) => {
   }
 }
 
-const wave_transition = await loadFragmentShader(`http://${window.location.host}/shaders/wave_transition.frag`)
-
 const { 
     add, 
     pos, 
@@ -329,7 +327,7 @@ export default function initGame(){
   const layers = getLayers()
   if(!layers) setLayers(['bg', 'game', "fg"], "game")
 
-  scene('game', () => {
+  scene('game', async() => {
     // Load sprites
     loadSprite('field', 'bg/nature_2/orig.png')
     // loadSprite('player', 'battle/Animations/Defensive_Stance_mini.png')
@@ -343,6 +341,7 @@ export default function initGame(){
 
     // Shader
     // Reference from: https://github.com/kaplayjs/kaplay/issues/394
+    const wave_transition = await loadFragmentShader(`shaders/wave_transition.frag`)
     loadShader('waveTransition', null, wave_transition)
 
     setData('changing', false)
