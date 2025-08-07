@@ -116,12 +116,17 @@ const getAvailableTarget = (target: Unit ,tIndex: number, start: number, end: nu
     }
 }
 
-const getRemainingUnits = (start: number, end: number) => {
+const getRemainingUnits = (start: number, end: number, mode=0) => {
     let remain = 0
     const units = store.getState().game.units
 
     for(let i=start; i < end; i++){
-        if(units[i] !== undefined && units[i].attribute.hp > 0) remain += 1
+        if(units[i] !== undefined &&
+            units[i].index === i && 
+            units[i].attribute.hp > 0) {
+                if(!mode) remain += 1
+                else loopConstructor(units[i].index?? i, units[i], positionRef, null, null)
+            }
     }
 
     return remain
@@ -138,7 +143,7 @@ const getSprite = (target: number) => {
 const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
     // Find the sprite
     const sprite = getSprite(tIndex)
-     if(sprite === undefined || !sprite.opacity){
+    if(sprite === undefined || !sprite.opacity){
         console.log('target sprite not found or destoryed', tIndex, sprite)
         return
     }
@@ -167,7 +172,7 @@ const showText = ({unit, uIndex, number, crit, tIndex, attribute}) => {
 
             store.dispatch(
                 setActiveUnits(activeUnits.filter(a => a !== tIndex))
-            )            
+            )
 
             if(tIndex === currentActivePlayer){
                 // Hide command component
@@ -213,9 +218,7 @@ const unitLoseHandle = (tIndex: number, sprite: GameObj) => {
             // Remove sprite
             sprite.destroy()
 
-            // Remove the atb bar of the unit
-            removeBar(tIndex)
-
+            const target = store.getState().game.units.find(u => u.index === tIndex)
             // If no more enemy in the scene
             const remainingEnemies = getRemainingUnits(5, 10)
             const remainingPlayers = getRemainingUnits(0, 5)
@@ -258,6 +261,11 @@ const unitLoseHandle = (tIndex: number, sprite: GameObj) => {
                     })                    
                 }      
             }
+
+            // Reset timers if the target was going to change position
+            if(target && target.action === 'change'){
+                getRemainingUnits(0, 5, 1)
+            }                   
         })
 
         fadeOutTimers.push({ index: tIndex, controller: timer })        
