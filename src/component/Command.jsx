@@ -47,16 +47,20 @@ export default function Command() {
   }
 
   const setAction = (action, unit) => {
+    const player = JSON.parse(JSON.stringify(unit))
+
+    player.action = action
+
     dispatch(
-      updateUnit({ index: unit.index, attribute: unit.attribute, action })
+      updateUnit({ index: player.index, attribute: player.attribute, action })
     )
 
     switch(action){
       case 'attack':
-        playerAction(action, unit)
+        playerAction(action, player)
       break;
       case 'skill':
-        unit.skill.forEach(s => {
+        player.skill.forEach(s => {
           setSkillList(prev => {
             return [...prev, skills[s]]
           });
@@ -83,7 +87,7 @@ export default function Command() {
       case 'defense':
       case 'change':
       case 'escape':
-        playerAction(action, unit)
+        playerAction(action, player)
       break;        
     }      
   }
@@ -119,8 +123,6 @@ export default function Command() {
   }
   // region Player Action
   const playerAction = (action, unit, payload = null) => {
-    if(unit === undefined) return
-
     switch (action) {
       case 'attack': {
         spriteHoverEvent.paused = false
