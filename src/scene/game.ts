@@ -108,6 +108,7 @@ export const stopEverything = () => {
 // region Draw characters
 const drawCharacters = (wave: { current: number, max: number }) => {
   const zoom = 1.5
+  const gameWidth = store.getState().setting.width
   let player : Unit[] = []
 
   for(let i=0; i < positionRef.length; i++){
@@ -149,10 +150,14 @@ const drawCharacters = (wave: { current: number, max: number }) => {
       if(data){
         player.push({...data})
 
+        const renderArea = set.renderArea()
+
+        console.log(renderArea)
+
         spriteRef.push(
           add([
             sprite('player', { flipX: (i > 0)? false : true }), 
-            pos(x, y - (67/2)), 
+            pos(x, y - 67 + 10), 
             scale(zoom),
             opacity(1),
             area(),
@@ -204,7 +209,7 @@ export const changeSpritePosition = async(index: number) => {
   const frontLineUnit: Unit[] = []
   const backLineUnits: Unit[] = []
   const frontLine : number[][] = [] 
-  const backLine : number[][] = [] 
+  const backLine : number[][] = []
   const newPositionRef : GameObj[] = []
   const enemies = units.splice(5, units.length - 5)
   playerPositionRef.filter((p, i) => {
@@ -229,6 +234,7 @@ export const changeSpritePosition = async(index: number) => {
 
   // Change unit order
   const newUnitOrder = backLineUnits.concat(frontLineUnit, enemies)
+  newUnitOrder.forEach((u, i) => u.index = i)
   console.log('newUnitOrder', newUnitOrder)
   store.dispatch(
       setUnits(newUnitOrder)
@@ -242,37 +248,41 @@ export const changeSpritePosition = async(index: number) => {
   const newOrder: number[][] = backLine.concat(frontLine)
 
   try {
+    // Move rect
     newOrder.forEach((p, i) => {
-      const s = spriteRef[i]
-      const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
-      const newIndex = oldIndex + frontLine.length
-
-      // Remove & add tag
-      s.untag(`index_${oldIndex}`)
-      s.tag(`index_${newIndex}`)
-
       const newPosition = [gameWidth * p[0], gameHeight * p[1]]
-
+      
       tween(
         positionRef[0][i].pos,
         vec2(newPosition[0], newPosition[1]),
         0.5,
         (pos) => positionRef[0][i].pos = pos,
         easings.easeInOutQuad
-      )
-
-      // Move sprite
-      tween(
-        s.pos,
-        vec2(newPosition[0], newPosition[1] - (67/2)),
-        0.5,
-        (pos) => s.pos = pos,
-        easings.easeInOutQuad
-      )
+      )      
     })
 
     // Replace playerPositionRef with the new array
     playerPositionRef.splice(0, playerPositionRef.length, ...newOrder)
+
+    spriteRef.forEach((s: GameObj) => {
+        const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
+        const newIndex = (oldIndex < frontLine.length)? oldIndex + backLine.length : oldIndex - frontLine.length
+
+        // Remove & add tag
+        s.untag(`index_${oldIndex}`)
+        s.tag(`index_${newIndex}`)
+
+        const newPosition = [gameWidth * newOrder[newIndex][0], gameHeight * newOrder[newIndex][1]]
+
+        // Move sprite
+        tween(
+          s.pos,
+          vec2(newPosition[0], newPosition[1] - 67 + 10),
+          0.5,
+          (pos) => s.pos = pos,
+          easings.easeInOutQuad
+        )        
+    })
 
     // Return the index after change
     return (index < frontLine.length)? index + backLine.length : index - frontLine.length 
