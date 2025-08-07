@@ -264,7 +264,7 @@ export const changeSpritePosition = async(index: number) => {
       // Move sprite
       tween(
         s.pos,
-        vec2(newPosition[0] - (67 / 2), newPosition[1] - (67 + 20)),
+        vec2(newPosition[0], newPosition[1] - (67/2)),
         0.5,
         (pos) => s.pos = pos,
         easings.easeInOutQuad
