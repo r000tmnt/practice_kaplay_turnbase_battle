@@ -8,7 +8,8 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          vendor: ["react", "react-dom", "react-redux", "@reduxjs/toolkit"], // Separate React into its own chunk
+          vendor: ["react", "react-dom"], // Separate React into its own chunk
+          store: ["react-redux", "@reduxjs/toolkit"],
           kaplay: ["kaplay", "kaplay-atb-plugin"],
         },
       },
