@@ -183,7 +183,7 @@ const drawCharacters = (wave: { current: number, max: number }) => {
       // Set ATB bars 
       player.forEach((p, i) => {
         // Get the real index
-        const index = p.index?? spriteRef[i].tags.find(t => t.includes('index_'))?.split('index_')[1]
+        const index = p.index
         loopConstructor(Number(index), p, positionRef, null, null)
       })            
     }      
