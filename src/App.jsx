@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { lazy, useEffect } from 'react'
 import './App.css'
 import initGame from './scene/game'
 
@@ -9,9 +9,9 @@ import { setScale, setUIoffset } from './store/setting';
 import { stopEverything, waveTransition } from './scene/game';
 
 // Components
-import BattleCounter from './component/BattleCounter';
-import UnitArrow from './component/UnitArrow';
-import Command from './component/Command';
+const BattleCounter = lazy(()=> import('./component/BattleCounter'));
+const UnitArrow = lazy(() => import('./component/UnitArrow'));
+const Command = lazy(() => import('./component/Command'));
 
 // capacitor plugin
 import { Device } from '@capacitor/device';
