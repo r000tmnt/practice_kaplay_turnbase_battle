@@ -34,6 +34,7 @@ export default function Command() {
   const activeUnits = useSelector(state => state.game.activeUnits)
   const [skillList, setSkillList] = useState([])
   const [itemList, setItemList] = useState([])
+  const [activePlayer, setActivePlayer] = useState({})
   const dispatch = useDispatch()
 
   const findAvailableTarget = (start, end) => {
@@ -45,9 +46,7 @@ export default function Command() {
     }      
   }
 
-  const setAction = (action) => {
-    const unit = JSON.parse(JSON.stringify(units[currentActivePlayer]))
-    unit.action = action
+  const setAction = (action, unit) => {
     dispatch(
       updateUnit({ index: unit.index, attribute: unit.attribute, action })
     )
@@ -90,10 +89,10 @@ export default function Command() {
   }
 
   const cancelAction = () => {
-    switch(units[currentActivePlayer].action){
+    switch(activePlayer.action){
       case 'attack':
         dispatch(
-          updateUnit({ index: units[currentActivePlayer].index, attribute: units[currentActivePlayer].attribute, action: '' })
+          updateUnit({ index: activePlayer.index, attribute: activePlayer.attribute, action: '' })
         )
       break;
       case 'skill':
@@ -391,22 +390,35 @@ export default function Command() {
   useEffect(() => {
     console.log('currentActivePlayer update ', currentActivePlayer)
     if(currentActivePlayer < 0){
+      setActivePlayer({})
       if(skillList.length) setSkillList([])
       if(itemList.length) setItemList([])
+    }else{
+      setActivePlayer(
+        units.find(u => u.index === currentActivePlayer)
+      )
     }
   }, [currentActivePlayer])
 
   useEffect(() => {
     console.log('units updated', units)
+    if(currentActivePlayer >= 0){
+      setActivePlayer(
+        units.find(u => u.index === currentActivePlayer)
+      )          
+    }
   }, [units])
 
   return(
     <>
       {/* <div>{units[currentActivePlayer]? units[currentActivePlayer].name : 'null'}</div> */}
       {/* Linear-gradient: https://stackoverflow.com/a/17353565/14173422 */}
-      <div className={`command ui ${units[currentActivePlayer] !== undefined && !units[currentActivePlayer].action.length? 'show' : 'hide'}`} style={{ left: `${uiOffsetV}px`, bottom: `${uiOffsetH}px` }} >
+      <div className={`command ui ${Object.entries(activePlayer).length && 
+                                    activePlayer.attribute.hp > 0 &&
+                                    !activePlayer.action.length? 'show' : 'hide'}`} 
+        style={{ left: `${uiOffsetV}px`, bottom: `${uiOffsetH}px` }} >
         <div className='avatar'>
-          { currentActivePlayer >= 0? units[currentActivePlayer]?.name : '' }
+          { currentActivePlayer >= 0? activePlayer?.name : '' }
           <img src="battle/Animations/Defensive_Stance.png" alt="player" style={{ width: `${gameWidth * 0.2}px`, height: `${gameWidth * 0.2}px`, objectFit: 'cover' }}></img>
           <div className='meter'>
             <label>
@@ -417,11 +429,11 @@ export default function Command() {
                   backgroundImage: `linear-gradient(
                                       to right, 
                                       red, 
-                                      red ${(units[currentActivePlayer]?.attribute.hp / units[currentActivePlayer]?.attribute.maxHp) * 100}%,
-                                      transparent ${(units[currentActivePlayer]?.attribute.hp / units[currentActivePlayer]?.attribute.maxHp) * 100}%, 
+                                      red ${(activePlayer?.attribute?.hp / activePlayer?.attribute?.maxHp) * 100}%,
+                                      transparent ${(activePlayer?.attribute?.hp / activePlayer?.attribute?.maxHp) * 100}%, 
                                       transparent 100%)`, 
                 }}>
-                { units[currentActivePlayer]?.attribute.hp }/{ units[currentActivePlayer]?.attribute.maxHp }
+                { activePlayer?.attribute?.hp }/{ activePlayer?.attribute?.maxHp }
               </div>
             </label>
             <label>
@@ -432,33 +444,33 @@ export default function Command() {
                   backgroundImage: `linear-gradient(
                                       to right, 
                                       blue, 
-                                      blue ${(units[currentActivePlayer]?.attribute.mp / units[currentActivePlayer]?.attribute.maxMp) * 100}%,
-                                      transparent ${(units[currentActivePlayer]?.attribute.mp / units[currentActivePlayer]?.attribute.maxMp) * 100}%, 
+                                      blue ${(activePlayer?.attribute?.mp / activePlayer?.attribute?.maxMp) * 100}%,
+                                      transparent ${(activePlayer?.attribute?.mp / activePlayer?.attribute?.maxMp) * 100}%, 
                                       transparent 100%)`, 
                 }}>
-                { units[currentActivePlayer]?.attribute.mp }/{ units[currentActivePlayer]?.attribute.maxMp }
+                { activePlayer?.attribute?.mp }/{ activePlayer?.attribute?.maxMp }
               </div>
             </label>
           </div>
         </div>
         <div className='action'>
           <div className='relative'>
-            <button className='position-center' onClick={() => setAction('attack')}>ATTACK</button>
+            <button className='position-center' onClick={() => setAction('attack', activePlayer)}>ATTACK</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => setAction('skill')}>SKILL</button>
+            <button className='position-center' onClick={() => setAction('skill', activePlayer)}>SKILL</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => setAction('item')}>ITEM</button>
+            <button className='position-center' onClick={() => setAction('item', activePlayer)}>ITEM</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => setAction('defense')}>DEFENSE</button>
+            <button className='position-center' onClick={() => setAction('defense', activePlayer)}>DEFENSE</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => setAction('change')}>CHANGE</button>
+            <button className='position-center' onClick={() => setAction('change', activePlayer)}>CHANGE</button>
           </div>
           <div className='relative'>
-            <button className='position-center' onClick={() => setAction('escape')}>ESCAPE</button>
+            <button className='position-center' onClick={() => setAction('escape', activePlayer)}>ESCAPE</button>
           </div>
         </div>
       </div>
@@ -469,9 +481,9 @@ export default function Command() {
           { skillList.map((s, index) => {
               if(s)
                 return (
-                  <button key={index} className={`skill-item ${units[currentActivePlayer] !== undefined && units[currentActivePlayer].attribute.mp < s.cost['mp']? 'not-enough' : ''}`} 
+                  <button key={index} className={`skill-item ${Object.entries(activePlayer).length && activePlayer?.attribute?.mp < s.cost['mp']? 'not-enough' : ''}`} 
                   onClick={() => {
-                    playerAction('skill', units[currentActivePlayer], s)
+                    playerAction('skill', activePlayer, s)
                     setSkillList([])
                   }}>
                     {/* <img src={s.icon} alt={s.name} /> */}
@@ -491,7 +503,7 @@ export default function Command() {
         </div>
         <button className="back" style={{ width: '100%' }}
         onClick={() => {
-          dispatch(updateUnit({ index: units[currentActivePlayer].index, attribute: units[currentActivePlayer].attribute, action: '' }))
+          dispatch(updateUnit({ index: activePlayer?.index, attribute: activePlayer?.attribute, action: '' }))
           setSkillList([])
         }}>BACK</button>
       </div>
@@ -503,7 +515,7 @@ export default function Command() {
               if(item)
                 return (
                   <button key={index} className={`item`} onClick={() => {
-                    playerAction('item', units[currentActivePlayer], item)
+                    playerAction('item', activePlayer, item)
                     setItemList([])
                   }}>
                     <div className='skill-name'>{item.name}</div>
@@ -514,13 +526,13 @@ export default function Command() {
         </div>
         <button className="back" style={{ width: '100%' }}
         onClick={() => {
-          dispatch(updateUnit({ index: units[currentActivePlayer].index, attribute: units[currentActivePlayer].attribute, action: '' }))
+          dispatch(updateUnit({ index: activePlayer?.index, attribute: activePlayer?.attribute, action: '' }))
           setItemList([])
         }}>BACK</button>
       </div>
 
       <button 
-        className={`back ui ${currentActivePlayer >= 0 && units[currentActivePlayer].action === 'attack'? 'show' : 'hide'}`} 
+        className={`back ui ${currentActivePlayer >= 0 && activePlayer?.action === 'attack'? 'show' : 'hide'}`} 
         style={{ left: `${uiOffsetV}px`, bottom: `${uiOffsetH}px` }}
         onClick={() => cancelAction()}>BACK</button>      
     </>
