@@ -51,7 +51,7 @@ const {
     loadFont,
     onDraw,
     shader,
-    // outline,
+    anchor,
     wait, 
     // time,
     loop,
@@ -108,7 +108,6 @@ export const stopEverything = () => {
 // region Draw characters
 const drawCharacters = (wave: { current: number, max: number }) => {
   const zoom = 1.5
-  const gameWidth = store.getState().setting.width
   let player : Unit[] = []
 
   for(let i=0; i < positionRef.length; i++){
@@ -157,10 +156,11 @@ const drawCharacters = (wave: { current: number, max: number }) => {
         spriteRef.push(
           add([
             sprite('player', { flipX: (i > 0)? false : true }), 
-            pos(x, y - 67 + 10), 
+            pos(x, y + (renderArea.height * 0.6)), 
             scale(zoom),
             opacity(1),
             area(),
+            anchor('botleft'),
             layer('game'),
             // tag
             "unit",
@@ -264,25 +264,27 @@ export const changeSpritePosition = async(index: number) => {
     // Replace playerPositionRef with the new array
     playerPositionRef.splice(0, playerPositionRef.length, ...newOrder)
 
-    spriteRef.forEach((s: GameObj) => {
-        const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
-        const newIndex = (oldIndex < frontLine.length)? oldIndex + backLine.length : oldIndex - frontLine.length
+    for(let i=0; i < 5; i++){
+      const s = spriteRef[i]
+      const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
+      const newIndex = (oldIndex < frontLine.length)? oldIndex + backLine.length : oldIndex - frontLine.length
 
-        // Remove & add tag
-        s.untag(`index_${oldIndex}`)
-        s.tag(`index_${newIndex}`)
+      // Remove & add tag
+      s.untag(`index_${oldIndex}`)
+      s.tag(`index_${newIndex}`)
 
-        const newPosition = [gameWidth * newOrder[newIndex][0], gameHeight * newOrder[newIndex][1]]
+      const newPosition = [gameWidth * newOrder[newIndex][0], gameHeight * newOrder[newIndex][1]]
+      const renderArea = positionRef[0][0].renderArea()
 
-        // Move sprite
-        tween(
-          s.pos,
-          vec2(newPosition[0], newPosition[1] - 67 + 10),
-          0.5,
-          (pos) => s.pos = pos,
-          easings.easeInOutQuad
-        )        
-    })
+      // Move sprite
+      tween(
+        s.pos,
+        vec2(newPosition[0], newPosition[1] + (renderArea.height * 0.6)),
+        0.5,
+        (pos) => s.pos = pos,
+        easings.easeInOutQuad
+      )            
+    }
 
     // Return the index after change
     return (index < frontLine.length)? index + backLine.length : index - frontLine.length 
