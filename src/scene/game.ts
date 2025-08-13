@@ -265,27 +265,30 @@ export const changeSpritePosition = async(index: number) => {
     for(let i=0; i < 5; i++){
       const s = spriteRef[i]
       const oldIndex = Number(s.tags.find(t => t.includes('index_'))?.split('index_')[1])
-      const newIndex = (oldIndex < frontLine.length)? oldIndex + backLine.length : oldIndex - frontLine.length
 
-      // Remove & add tag
-      s.untag(`index_${oldIndex}`)
-      s.tag(`index_${newIndex}`)
+      if(oldIndex < 5){
+        const newIndex = (oldIndex < frontLine.length)? oldIndex + backLine.length : oldIndex - frontLine.length
 
-      const newPosition = [gameWidth * newOrder[newIndex][0], gameHeight * newOrder[newIndex][1]]
-      const renderArea = positionRef[0][0].renderArea()
+        // Remove & add tag
+        s.untag(`index_${oldIndex}`)
+        s.tag(`index_${newIndex}`)
 
-      // Move sprite
-      tween(
-        s.pos,
-        vec2(newPosition[0], newPosition[1] + (renderArea.height * 0.6)),
-        0.5,
-        (pos) => s.pos = pos,
-        easings.easeInOutQuad
-      )            
+        const newPosition = [gameWidth * newOrder[newIndex][0], gameHeight * newOrder[newIndex][1]]
+        const renderArea = positionRef[0][0].renderArea()
+
+        // Move sprite
+        tween(
+          s.pos,
+          vec2(newPosition[0], newPosition[1] + (renderArea.height * 0.6)),
+          0.5,
+          (pos) => s.pos = pos,
+          easings.easeInOutQuad
+        )              
+      }
     }
 
     // Return the index after change
-    return (index < frontLine.length)? index + backLine.length : index - frontLine.length 
+    return { uIndex: (index < frontLine.length)? index + backLine.length : index - frontLine.length, action: 'change' }
   } catch (error) {
     console.log('Error occured while changing sprite position ' + error)
     return -1
