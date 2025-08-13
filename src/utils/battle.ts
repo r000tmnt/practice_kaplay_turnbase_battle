@@ -57,22 +57,27 @@ export const controller = (actionFunction: Function, index: number, actionCallBa
         console.log('player ' + index + ' result', result)
 
         if(typeof result === "object") {
-            showText(result)
-        }
-
-        if(typeof result === "number" && result >= 0){
-            // Reset timers
-            const unit = store.getState().game.units.find(u => u.index === result)
-            if(unit && unit.action === 'change'){
-                const units = store.getState().game.units
-                const turn = store.getState().game.turn
-                store.dispatch(setTurn(turn + 1))
-                setData('changing', false)
-                store.dispatch(updateUnit({index: unit.index, attribute: unit.attribute, action: ''})) 
-                // Get players on the field
-                const remain : number[] = Array.from([0, 1, 2, 3, 4]).filter(i => units[i].attribute.hp > 0)
-                remain.forEach(i => loopConstructor(i, units[i], positionRef, null, null))
-            }            
+            switch(result.action){
+                case 'attack':
+                case 'skill':
+                case 'item':
+                    showText(result)
+                break;
+                case 'change':
+                    const units = store.getState().game.units
+                    const unit = units.find(u => u.index === result.uIndex)
+                    const turn = store.getState().game.turn
+                    store.dispatch(setTurn(turn + 1))
+                    setData('changing', false)
+                    store.dispatch(updateUnit({index: unit?.index, attribute: unit?.attribute, action: ''})) 
+                    // Get players on the field
+                    Array.from([0, 1, 2, 3, 4]).filter(i => {
+                        if(units[i].index && units[i].index < 5 && units[i].attribute.hp > 0){
+                            loopConstructor(units[i].index, units[i], positionRef, null, null)
+                        }
+                    })
+                break;
+            }
         }
 
         if(actionCallBack) actionCallBack()
@@ -338,7 +343,7 @@ export const attack = async (unit: Unit, target: Unit, uIndex: number, tIndex: n
         }
     }) 
 
-    return { unit, uIndex, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute }
+    return { unit, uIndex, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute, action: 'attack' }
 }
 
 /**
@@ -453,7 +458,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                         }
                     }
                 }) 
-                resolve({ unit: caster, uIndex, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute })
+                resolve({ unit: caster, uIndex, number: dmg, crit: rng <= crit, tIndex, attribute: tragetAttribute, action: 'skill' })
             }else{
                 const realTarget: { target: Unit | null, tIndex: number }  = getAvailableTarget(target, tIndex, 0, 5)
 
@@ -532,7 +537,7 @@ export const castSkill = async (unit: Unit, target: Unit, uIndex: number, tIndex
                     updateUnit({ index: caster.index, attribute: caster.attribute, action: caster.action })
                 )       
 
-                resolve({ unit: caster, uIndex, number, crit: false, tIndex, attribute: tragetAttribute })    
+                resolve({ unit: caster, uIndex, number, crit: false, tIndex, attribute: tragetAttribute, action: 'skill' })    
             }
         })        
     })
@@ -610,7 +615,7 @@ export const useItem = async (unit: Unit, target: Unit, uIndex: number, tIndex: 
                 updateUnit({ index: target.index, attribute: tragetAttribute, action: target.action })
             )
 
-            if(number > 0) resolve({ unit, number, uIndex, crit: false, tIndex, attribute: tragetAttribute })                
+            if(number > 0) resolve({ unit, number, uIndex, crit: false, tIndex, attribute: tragetAttribute, action: 'skill' })                
         })        
     })
 }
